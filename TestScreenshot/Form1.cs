@@ -13,6 +13,7 @@ using EasyHook;
 using System.Runtime.Remoting.Channels.Ipc;
 using System.Runtime.Remoting;
 using System.Runtime.InteropServices;
+using System.IO;
 
 namespace TestScreenshot
 {
@@ -61,10 +62,34 @@ namespace TestScreenshot
         private void AttachProcess()
         {
             bool newInstanceFound = false;
-            
+
+            Direct3DVersion direct3DVersion = Direct3DVersion.Direct3D10;
+
+            if (rbDirect3D11.Checked)
+            {
+                direct3DVersion = Direct3DVersion.Direct3D11;
+            }
+            else if (rbDirect3D10_1.Checked)
+            {
+                direct3DVersion = Direct3DVersion.Direct3D10_1;
+            }
+            else if (rbDirect3D10.Checked)
+            {
+                direct3DVersion = Direct3DVersion.Direct3D10;
+            }
+            else if (rbDirect3D9.Checked)
+            {
+                direct3DVersion = Direct3DVersion.Direct3D9;
+            }
+            else if (rbAutodetect.Checked)
+            {
+                direct3DVersion = Direct3DVersion.AutoDetect;
+            }
+
+            string exeName = Path.GetFileNameWithoutExtension(textBox1.Text); 
             while (!newInstanceFound)
             {
-                Process[] processes = Process.GetProcessesByName(textBox1.Text);
+                Process[] processes = Process.GetProcessesByName(exeName);
                 foreach (Process process in processes)
                 {
                     // Simply attach to the first one found.
@@ -75,22 +100,13 @@ namespace TestScreenshot
                         continue;
                     }
 
-                    Direct3DVersion direct3DVersion = Direct3DVersion.Direct3D10;
-
-                    if (rbDirect3D11.Checked)
+                    // Skip if the process is already hooked (and we want to hook multiple applications)
+                    if (HookManager.IsHooked(process.Id))
                     {
-                        direct3DVersion = Direct3DVersion.Direct3D11;
-                    }
-                    else if (rbDirect3D10.Checked)
-                    {
-                        direct3DVersion = Direct3DVersion.Direct3D10;
-                    }
-                    else if (rbDirect3D9.Checked)
-                    {
-                        direct3DVersion = Direct3DVersion.Direct3D9;
+                        continue;
                     }
 
-                    // Keep track of hooked processes in case more than one need to be hooked
+                    // Keep track of hooked processes in case more than one needs to be hooked
                     HookManager.AddHookedProcess(process.Id);
                     
                     processId = process.Id;
@@ -100,12 +116,13 @@ namespace TestScreenshot
                     RemoteHooking.Inject(
                         process.Id,
                         InjectionOptions.Default,
-                        "ScreenshotInject.dll", // 32-bit version (the same because AnyCPU) could use different assembly that links to 32-bit C++ helper dll
-                        "ScreenshotInject.dll", // 64-bit version (the same because AnyCPU) could use different assembly that links to 64-bit C++ helper dll
-    // the optional parameter list...
+                        typeof(ScreenshotInject.ScreenshotInjection).Assembly.Location,//"ScreenshotInject.dll", // 32-bit version (the same because AnyCPU) could use different assembly that links to 32-bit C++ helper dll
+                        typeof(ScreenshotInject.ScreenshotInjection).Assembly.Location, //"ScreenshotInject.dll", // 64-bit version (the same because AnyCPU) could use different assembly that links to 64-bit C++ helper dll
+                    // the optional parameter list...
                         ChannelName, // The name of the IPC channel for the injected assembly to connect to
-                        direct3DVersion // The direct3DVersion used in the target application
-                        );
+                        direct3DVersion.ToString(), // The direct3DVersion used in the target application
+                        cbDrawOverlay.Checked
+                    );
 
                     // Ensure the target process is in the foreground,
                     // this prevents an issue where the target app appears to be in 
