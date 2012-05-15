@@ -259,39 +259,42 @@ namespace ScreenshotInject
 
                     #region Example: Draw Overlay (after screenshot so we don't capture overlay as well)
 
-                    #region Draw fading lines based on last screencapture request
-                    if (_lastRequestTime != null && _lineVectors != null)
+                    if (this.ShowOverlay)
                     {
-                        TimeSpan timeSinceRequest = DateTime.Now - _lastRequestTime.Value;
-                        if (timeSinceRequest.TotalMilliseconds < 1000.0)
+                        #region Draw fading lines based on last screencapture request
+                        if (_lastRequestTime != null && _lineVectors != null)
                         {
-                            using (Line line = new Line(device))
+                            TimeSpan timeSinceRequest = DateTime.Now - _lastRequestTime.Value;
+                            if (timeSinceRequest.TotalMilliseconds < 1000.0)
                             {
-                                _lineAlpha = (float)((1000.0 - timeSinceRequest.TotalMilliseconds) / 1000.0); // This is our fade out
-                                line.Antialias = true;
-                                line.Width = 1.0f;
-                                line.Begin();
-                                line.Draw(_lineVectors, new SlimDX.Color4(_lineAlpha, 0.5f, 0.5f, 1.0f));
-                                line.End();
+                                using (Line line = new Line(device))
+                                {
+                                    _lineAlpha = (float)((1000.0 - timeSinceRequest.TotalMilliseconds) / 1000.0); // This is our fade out
+                                    line.Antialias = true;
+                                    line.Width = 1.0f;
+                                    line.Begin();
+                                    line.Draw(_lineVectors, new SlimDX.Color4(_lineAlpha, 0.5f, 0.5f, 1.0f));
+                                    line.End();
+                                }
+                            }
+                            else
+                            {
+                                _lineVectors = null;
                             }
                         }
-                        else
-                        {
-                            _lineVectors = null;
-                        }
-                    }
-                    #endregion
+                        #endregion
 
-                    #region Draw frame rate
-                    using (SlimDX.Direct3D9.Font font = new SlimDX.Direct3D9.Font(device, new System.Drawing.Font("Times New Roman", 16.0f)))
-                    {
-                        if (_lastFrame != null)
+                        #region Draw frame rate
+                        using (SlimDX.Direct3D9.Font font = new SlimDX.Direct3D9.Font(device, new System.Drawing.Font("Times New Roman", 16.0f)))
                         {
-                            font.DrawString(null, String.Format("{0:N1} fps", (1000.0 / (DateTime.Now - _lastFrame.Value).TotalMilliseconds)), 100, 100, System.Drawing.Color.Red);
+                            if (_lastFrame != null)
+                            {
+                                font.DrawString(null, String.Format("{0:N1} fps", (1000.0 / (DateTime.Now - _lastFrame.Value).TotalMilliseconds)), 100, 100, System.Drawing.Color.Red);
+                            }
+                            _lastFrame = DateTime.Now;
                         }
-                        _lastFrame = DateTime.Now;
+                        #endregion
                     }
-                    #endregion
 
                     #endregion
                 }

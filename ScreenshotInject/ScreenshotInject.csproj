@@ -57,11 +57,10 @@
     <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="EasyHook, Version=2.5.0.0, Culture=neutral, PublicKeyToken=4b580fca19d0b0c5, processorArchitecture=MSIL" />
-    <Reference Include="SlimDX, Version=2.0.9.42, Culture=neutral, PublicKeyToken=b1b0c32fd1ffe4f9, processorArchitecture=x86">
+    <Reference Include="EasyHook, Version=2.7.4499.0, Culture=neutral, PublicKeyToken=4b580fca19d0b0c5, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\..\..\..\..\..\..\Program Files (x86)\SlimDX SDK (February 2010)\Bin\x86\SlimDX.dll</HintPath>
     </Reference>
+    <Reference Include="SlimDX, Version=2.0.13.43, Culture=neutral, PublicKeyToken=b1b0c32fd1ffe4f9, processorArchitecture=AMD64" />
     <Reference Include="System" />
     <Reference Include="System.Core">
       <RequiredTargetFramework>3.5</RequiredTargetFramework>
@@ -79,6 +78,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="BaseDXHook.cs" />
+    <Compile Include="DXHookD3D10_1.cs" />
     <Compile Include="D3D9.cs" />
     <Compile Include="DXGI.cs" />
     <Compile Include="DXHookD3D11.cs" />

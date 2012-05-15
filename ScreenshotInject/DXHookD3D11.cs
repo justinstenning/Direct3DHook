@@ -344,13 +344,14 @@ namespace ScreenshotInject
                     #endregion
 
                     #region TODO: Draw overlay (after screenshot so we don't capture overlay as well)
-
-                    // Note: Direct3D 11 doesn't have font support, so I believe the approach is to use
-                    //       a Direct3D 10.1 device with Direct2d, render to a texture, and then blend
-                    //       this into the Direct3D 11 backbuffer - hmm sounds like fun.
-                    // http://forums.create.msdn.com/forums/t/38961.aspx
-                    // http://www.gamedev.net/topic/547920-how-to-use-d2d-with-d3d11/
-
+                    if (this.ShowOverlay)
+                    {
+                        // Note: Direct3D 11 doesn't have font support, so I believe the approach is to use
+                        //       a Direct3D 10.1 device with Direct2d, render to a texture, and then blend
+                        //       this into the Direct3D 11 backbuffer - hmm sounds like fun.
+                        // http://forums.create.msdn.com/forums/t/38961.aspx
+                        // http://www.gamedev.net/topic/547920-how-to-use-d2d-with-d3d11/
+                    }
                     #endregion
                 }
                 catch (Exception e)
