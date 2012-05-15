@@ -51,6 +51,9 @@
             this.rbDirect3D9 = new System.Windows.Forms.RadioButton();
             this.rbDirect3D10 = new System.Windows.Forms.RadioButton();
             this.rbDirect3D11 = new System.Windows.Forms.RadioButton();
+            this.cbDrawOverlay = new System.Windows.Forms.CheckBox();
+            this.rbAutodetect = new System.Windows.Forms.RadioButton();
+            this.rbDirect3D10_1 = new System.Windows.Forms.RadioButton();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).BeginInit();
             this.SuspendLayout();
             // 
@@ -77,12 +80,12 @@
             // 
             // pictureBox1
             // 
-            this.pictureBox1.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom)
-                        | System.Windows.Forms.AnchorStyles.Left)
-                        | System.Windows.Forms.AnchorStyles.Right)));
+            this.pictureBox1.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
             this.pictureBox1.Location = new System.Drawing.Point(193, 13);
             this.pictureBox1.Name = "pictureBox1";
-            this.pictureBox1.Size = new System.Drawing.Size(797, 391);
+            this.pictureBox1.Size = new System.Drawing.Size(797, 405);
             this.pictureBox1.TabIndex = 2;
             this.pictureBox1.TabStop = false;
             // 
@@ -198,13 +201,13 @@
             // 
             // txtDebugLog
             // 
-            this.txtDebugLog.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)
-                        | System.Windows.Forms.AnchorStyles.Right)));
-            this.txtDebugLog.Location = new System.Drawing.Point(5, 410);
+            this.txtDebugLog.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.txtDebugLog.Location = new System.Drawing.Point(5, 424);
             this.txtDebugLog.Multiline = true;
             this.txtDebugLog.Name = "txtDebugLog";
             this.txtDebugLog.ScrollBars = System.Windows.Forms.ScrollBars.Both;
-            this.txtDebugLog.Size = new System.Drawing.Size(985, 104);
+            this.txtDebugLog.Size = new System.Drawing.Size(985, 90);
             this.txtDebugLog.TabIndex = 16;
             // 
             // label6
@@ -228,32 +231,30 @@
             // cbAutoGAC
             // 
             this.cbAutoGAC.AutoSize = true;
-            this.cbAutoGAC.Location = new System.Drawing.Point(5, 387);
+            this.cbAutoGAC.Location = new System.Drawing.Point(5, 378);
             this.cbAutoGAC.Name = "cbAutoGAC";
             this.cbAutoGAC.Size = new System.Drawing.Size(179, 17);
-            this.cbAutoGAC.TabIndex = 19;
+            this.cbAutoGAC.TabIndex = 25;
             this.cbAutoGAC.Text = "Auto register GAC (run as admin)";
             this.cbAutoGAC.UseVisualStyleBackColor = true;
             // 
             // rbDirect3D9
             // 
             this.rbDirect3D9.AutoSize = true;
-            this.rbDirect3D9.Location = new System.Drawing.Point(10, 309);
+            this.rbDirect3D9.Location = new System.Drawing.Point(93, 309);
             this.rbDirect3D9.Name = "rbDirect3D9";
             this.rbDirect3D9.Size = new System.Drawing.Size(76, 17);
-            this.rbDirect3D9.TabIndex = 20;
+            this.rbDirect3D9.TabIndex = 21;
             this.rbDirect3D9.Text = "Direct3D 9";
             this.rbDirect3D9.UseVisualStyleBackColor = true;
             // 
             // rbDirect3D10
             // 
             this.rbDirect3D10.AutoSize = true;
-            this.rbDirect3D10.Checked = true;
             this.rbDirect3D10.Location = new System.Drawing.Point(10, 332);
             this.rbDirect3D10.Name = "rbDirect3D10";
             this.rbDirect3D10.Size = new System.Drawing.Size(82, 17);
-            this.rbDirect3D10.TabIndex = 21;
-            this.rbDirect3D10.TabStop = true;
+            this.rbDirect3D10.TabIndex = 22;
             this.rbDirect3D10.Text = "Direct3D 10";
             this.rbDirect3D10.UseVisualStyleBackColor = true;
             // 
@@ -263,16 +264,52 @@
             this.rbDirect3D11.Location = new System.Drawing.Point(10, 355);
             this.rbDirect3D11.Name = "rbDirect3D11";
             this.rbDirect3D11.Size = new System.Drawing.Size(82, 17);
-            this.rbDirect3D11.TabIndex = 22;
-            this.rbDirect3D11.TabStop = true;
+            this.rbDirect3D11.TabIndex = 24;
             this.rbDirect3D11.Text = "Direct3D 11";
             this.rbDirect3D11.UseVisualStyleBackColor = true;
+            // 
+            // cbDrawOverlay
+            // 
+            this.cbDrawOverlay.AutoSize = true;
+            this.cbDrawOverlay.Checked = true;
+            this.cbDrawOverlay.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.cbDrawOverlay.Location = new System.Drawing.Point(5, 401);
+            this.cbDrawOverlay.Name = "cbDrawOverlay";
+            this.cbDrawOverlay.Size = new System.Drawing.Size(90, 17);
+            this.cbDrawOverlay.TabIndex = 26;
+            this.cbDrawOverlay.Text = "Draw Overlay";
+            this.cbDrawOverlay.UseVisualStyleBackColor = true;
+            // 
+            // rbAutodetect
+            // 
+            this.rbAutodetect.AutoSize = true;
+            this.rbAutodetect.Checked = true;
+            this.rbAutodetect.Location = new System.Drawing.Point(10, 309);
+            this.rbAutodetect.Name = "rbAutodetect";
+            this.rbAutodetect.Size = new System.Drawing.Size(77, 17);
+            this.rbAutodetect.TabIndex = 20;
+            this.rbAutodetect.TabStop = true;
+            this.rbAutodetect.Text = "Autodetect";
+            this.rbAutodetect.UseVisualStyleBackColor = true;
+            // 
+            // rbDirect3D10_1
+            // 
+            this.rbDirect3D10_1.AutoSize = true;
+            this.rbDirect3D10_1.Location = new System.Drawing.Point(93, 332);
+            this.rbDirect3D10_1.Name = "rbDirect3D10_1";
+            this.rbDirect3D10_1.Size = new System.Drawing.Size(91, 17);
+            this.rbDirect3D10_1.TabIndex = 23;
+            this.rbDirect3D10_1.Text = "Direct3D 10.1";
+            this.rbDirect3D10_1.UseVisualStyleBackColor = true;
             // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(1002, 526);
+            this.Controls.Add(this.rbDirect3D10_1);
+            this.Controls.Add(this.rbAutodetect);
+            this.Controls.Add(this.cbDrawOverlay);
             this.Controls.Add(this.rbDirect3D11);
             this.Controls.Add(this.rbDirect3D10);
             this.Controls.Add(this.rbDirect3D9);
@@ -330,6 +367,9 @@
         private System.Windows.Forms.RadioButton rbDirect3D9;
         private System.Windows.Forms.RadioButton rbDirect3D10;
         private System.Windows.Forms.RadioButton rbDirect3D11;
+        private System.Windows.Forms.CheckBox cbDrawOverlay;
+        private System.Windows.Forms.RadioButton rbAutodetect;
+        private System.Windows.Forms.RadioButton rbDirect3D10_1;
     }
 }
 

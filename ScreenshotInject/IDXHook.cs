@@ -14,6 +14,12 @@ namespace ScreenshotInject
             set;
         }
 
+        bool ShowOverlay
+        {
+            get;
+            set;
+        }
+
         ScreenshotRequest Request
         {
             get;

@@ -1,0 +1,49 @@
+In the current stable version "EasyHook 2.6" I tried to fix all bugs reported by the community.
+But there are still some issues left that were not fixable:
+
+**********************************************************************************
+1) It is still not directly possible to CreateAndInject() managed targets.
+**********************************************************************************
+
+First I want to point out that this ONLY APPLIES TO CreateAndInject() and
+only to managed targets. Hooking already running managed targets does not 
+produce this issue! Only if you want to newly create one...
+
+REASON:
+
+It wasn't that easy but after some debugging I found out that NET is hijacking
+the first active thread in a process. And since CreateAndInject() is meant to
+execute EasyHook in first place, NET hijacks the thread intended to run EasyHook.
+So EasyHook is never executed and the host waits until the target terminates.
+Then I tried to start another thread but the same problem occurred. It does not
+matter how many suspended threads you create and which one you start, the first
+active thread will always run the process instead of EasyHook!
+
+WORKAROUND:
+
+Fortunately, NET is a good child ;-). Just setup a wrapper process, install all your
+hook either locally or remotely in that process. Remotely means to "inject" a dll
+into the wrapper process which has the advantage that EasyHook simplifies the work
+required to setup a proper IPC-Connection. 
+After all your hooks are installed into the wrapper, all you have to do is to load
+the target process by calling "System.Reflection.Assembly.Load()", extract the
+main() method and execute it via dynamic invoke. To all guys new to this invokation
+stuff, just read some articles about NET reflection and dynamic invokation ;-).
+
+
+**********************************************************************************
+2) Launching ProcessMonitor.exe indirectly causes targets to crash.
+**********************************************************************************
+
+REASON:
+
+I am not really sure, but I am pretty sure that this is not a bug in EasyHook.
+
+WORKAROUND:
+
+Since the explorer obviously is able to start ProcessMonitor properly, I assume
+that this issue is just some sort of missing parameters or misconfiguration.
+I recommend trying ShellExecute() instead of CreateProcess(). This way you should
+get the same behaviour as if the process was launched through the explorer, which
+is proved to work...
+

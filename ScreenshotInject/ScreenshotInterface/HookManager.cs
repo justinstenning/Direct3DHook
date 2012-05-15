@@ -31,6 +31,14 @@ namespace ScreenshotInterface
             }
         }
 
+        public static bool IsHooked(Int32 processId)
+        {
+            lock (HookedProcesses)
+            {
+                return HookedProcesses.Contains(processId);
+            }
+        }
+
         [Serializable]
         public class ProcessInfo
         {

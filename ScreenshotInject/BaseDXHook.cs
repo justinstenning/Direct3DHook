@@ -135,6 +135,12 @@ namespace ScreenshotInject
             set;
         }
 
+        public bool ShowOverlay
+        {
+            get;
+            set;
+        }
+
         private ScreenshotInterface.ScreenshotRequest _request;
         public ScreenshotInterface.ScreenshotRequest Request
         {

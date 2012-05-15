@@ -5,16 +5,16 @@ using System.Linq;
 using System.Text;
 using System.Runtime.InteropServices;
 using EasyHook;
-using SlimDX.DXGI;
 using SlimDX.Direct3D10;
+using SlimDX.Direct3D10_1;
+using SlimDX.DXGI;
 using SlimDX;
 using System.IO;
 using System.Threading;
-using Device = SlimDX.Direct3D10.Device;
 
 namespace ScreenshotInject
 {
-    enum D3D10DeviceVTbl : short
+    enum D3D10_1DeviceVTbl : short
     {
         // IUnknown
         QueryInterface = 0,
@@ -117,22 +117,27 @@ namespace ScreenshotInject
         OpenSharedResource = 95,
         SetTextFilterSize = 96,
         GetTextFilterSize = 97,
+
+        // ID3D10Device1
+        CreateShaderResourceView1 = 98,
+        CreateBlendState1 = 99,
+        GetFeatureLevel = 100,
     }
 
     /// <summary>
     /// Direct3D 10 Hook - this hooks the SwapChain.Present method to capture images
     /// </summary>
-    internal class DXHookD3D10: BaseDXHook
+    internal class DXHookD3D10_1: BaseDXHook
     {
-        const int D3D10_DEVICE_METHOD_COUNT = 98;
+        const int D3D10_1_DEVICE_METHOD_COUNT = 101;
 
-        public DXHookD3D10(ScreenshotInterface.ScreenshotInterface ssInterface)
+        public DXHookD3D10_1(ScreenshotInterface.ScreenshotInterface ssInterface)
             : base(ssInterface)
         {
             this.DebugMessage("Create");
         }
 
-        List<IntPtr> _d3d10VTblAddresses = null;
+        List<IntPtr> _d3d10_1VTblAddresses = null;
         List<IntPtr> _dxgiSwapChainVTblAddresses = null;
 
         LocalHook DXGISwapChain_PresentHook = null;
@@ -142,7 +147,7 @@ namespace ScreenshotInject
         {
             get
             {
-                return "DXHookD3D10";
+                return "DXHookD3D10_1";
             }
         }
 
@@ -151,21 +156,21 @@ namespace ScreenshotInject
             this.DebugMessage("Hook: Begin");
 
             // Determine method addresses in Direct3D10.Device, and DXGI.SwapChain
-            if (_d3d10VTblAddresses == null)
+            if (_d3d10_1VTblAddresses == null)
             {
-                _d3d10VTblAddresses = new List<IntPtr>();
+                _d3d10_1VTblAddresses = new List<IntPtr>();
                 _dxgiSwapChainVTblAddresses = new List<IntPtr>();
                 this.DebugMessage("Hook: Before device creation");
-                using (SlimDX.DXGI.Factory factory = new SlimDX.DXGI.Factory())
+                using (Factory1 factory = new Factory1())
                 {
-                    using (SlimDX.Direct3D10.Device device = new Device(factory.GetAdapter(0), DriverType.Hardware, DeviceCreationFlags.None))
+                    using (var device = new SlimDX.Direct3D10_1.Device1(factory.GetAdapter(0), DriverType.Hardware, SlimDX.Direct3D10.DeviceCreationFlags.None, FeatureLevel.Level_10_1))
                     {
                         this.DebugMessage("Hook: Device created");
-                        _d3d10VTblAddresses.AddRange(GetVTblAddresses(device.ComPointer, D3D10_DEVICE_METHOD_COUNT));
+                        _d3d10_1VTblAddresses.AddRange(GetVTblAddresses(device.ComPointer, D3D10_1_DEVICE_METHOD_COUNT));
 
-                        using (SlimDX.Windows.RenderForm renderForm = new SlimDX.Windows.RenderForm())
+                        using (var renderForm = new SlimDX.Windows.RenderForm())
                         {
-                            using (SlimDX.DXGI.SwapChain sc = new SlimDX.DXGI.SwapChain(factory, device, DXGI.CreateSwapChainDescription(renderForm.Handle)))
+                            using (var sc = new SwapChain(factory, device, DXGI.CreateSwapChainDescription(renderForm.Handle)))
                             {
                                 _dxgiSwapChainVTblAddresses.AddRange(GetVTblAddresses(sc.ComPointer, DXGI.DXGI_SWAPCHAIN_METHOD_COUNT));
                             }
@@ -274,7 +279,6 @@ namespace ScreenshotInject
                 _swapChain = SlimDX.DXGI.SwapChain.FromPointer(swapChainPtr);
             }
             SwapChain swapChain = _swapChain;
-            //using (SlimDX.DXGI.SwapChain swapChain = SlimDX.DXGI.SwapChain.FromPointer(swapChainPtr))
             {
                 try
                 {
@@ -419,7 +423,7 @@ namespace ScreenshotInject
 
                                 using (Font font = new Font(texture.Device, fd))
                                 {
-                                    DrawText(font, new Vector2(100, 100), String.Format("{0}", DateTime.Now), new Color4(System.Drawing.Color.Red));
+                                    DrawText(font, new Vector2(100, 100), String.Format("{0}", DateTime.Now), new Color4(System.Drawing.Color.Red.R, System.Drawing.Color.Red.G, System.Drawing.Color.Red.B, System.Drawing.Color.Red.A));
                                 }
                             }
                             _lastFrame = DateTime.Now;
@@ -439,7 +443,7 @@ namespace ScreenshotInject
             }
         }
 
-        private void DrawText(Font font, Vector2 pos, string text, Color4 color)
+        private void DrawText(SlimDX.Direct3D10.Font font, Vector2 pos, string text, Color4 color)
         {
             font.Draw(null, text, new System.Drawing.Rectangle((int)pos.X, (int)pos.Y, 0, 0), SlimDX.Direct3D10.FontDrawFlags.NoClip, color);
         }
