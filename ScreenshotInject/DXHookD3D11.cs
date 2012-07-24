@@ -90,6 +90,7 @@ namespace ScreenshotInject
 
         public override void Hook()
         {
+            this.DebugMessage("Hook: Begin");
             if (_d3d11VTblAddresses == null)
             {
                 _d3d11VTblAddresses = new List<IntPtr>();
@@ -101,6 +102,7 @@ namespace ScreenshotInject
                 SwapChain swapChain;
                 using (SlimDX.Windows.RenderForm renderForm = new SlimDX.Windows.RenderForm())
                 {
+                    this.DebugMessage("Hook: Before device creation");
                     SlimDX.Result result = SlimDX.Direct3D11.Device.CreateWithSwapChain(
                         DriverType.Hardware,
                         DeviceCreationFlags.None,
@@ -155,8 +157,17 @@ namespace ScreenshotInject
         {
             try
             {
-                DXGISwapChain_PresentHook.Dispose();
-                DXGISwapChain_ResizeTargetHook.Dispose();
+                if (DXGISwapChain_PresentHook != null)
+                {
+                    DXGISwapChain_PresentHook.Dispose();
+                    DXGISwapChain_PresentHook = null;
+                }
+                if (DXGISwapChain_ResizeTargetHook != null)
+                {
+                    DXGISwapChain_ResizeTargetHook.Dispose();
+                    DXGISwapChain_ResizeTargetHook = null;
+                }
+                
                 this.Request = null;
             }
             catch
@@ -189,7 +200,12 @@ namespace ScreenshotInject
         /// <returns></returns>
         int ResizeTargetHook(IntPtr swapChainPtr, ref DXGI.DXGI_MODE_DESC newTargetParameters)
         {
-            using (SlimDX.DXGI.SwapChain swapChain = SlimDX.DXGI.SwapChain.FromPointer(swapChainPtr))
+			if (swapChainPtr != _swapChainPointer)
+            {
+                _swapChain = SlimDX.DXGI.SwapChain.FromPointer(swapChainPtr);
+            }
+            SwapChain swapChain = _swapChain;
+            //using (SlimDX.DXGI.SwapChain swapChain = SlimDX.DXGI.SwapChain.FromPointer(swapChainPtr))
             {
                 // This version creates a new texture for each request so there is nothing to resize.
                 // IF the size of the texture is known each time, we could create it once, and then possibly need to resize it here
