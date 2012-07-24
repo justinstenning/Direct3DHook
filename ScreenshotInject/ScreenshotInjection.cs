@@ -125,9 +125,13 @@ namespace ScreenshotInject
                     case Direct3DVersion.Direct3D11:
                         _directXHook = new DXHookD3D11(_interface);
                         break;
+                    //case Direct3DVersion.Direct3D11_1:
+                    //    _directXHook = new DXHookD3D11_1(_interface);
+                    //    return;
                     default:
                         _interface.OnDebugMessage(RemoteHooking.GetCurrentProcessId(), "Unsupported Direct3DVersion");
-                        break;
+                        Thread.Sleep(100); // Sleep long enough for the message to be received
+                        return;
                 }
                 _directXHook.ShowOverlay = showOverlay;
 

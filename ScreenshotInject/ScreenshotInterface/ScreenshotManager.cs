@@ -77,6 +77,45 @@ namespace ScreenshotInterface
             }
         }
 
+        public static ScreenshotResponse GetScreenshotSynchronous(Int32 clientPID, ScreenshotRequest screenshotRequest)
+        {
+            // 2 second timeout
+            return GetScreenshotSynchronous(clientPID, screenshotRequest, new TimeSpan(0, 0, 2));
+        }
+
+        public static ScreenshotResponse GetScreenshotSynchronous(Int32 clientPID, ScreenshotRequest screenshotRequest, TimeSpan timeout)
+        {
+            object srLock = new object();
+            ScreenshotResponse sr = null;
+            
+            ScreenshotRequestResponseNotification srrn = delegate(Int32 cPID, ResponseStatus status, ScreenshotResponse screenshotResponse)
+            {
+                Interlocked.Exchange(ref sr, screenshotResponse);
+            };
+            DateTime startRequest = DateTime.Now;
+            AddScreenshotRequest(clientPID, screenshotRequest, srrn);
+
+            // Wait until the response has been returned
+            while (true)
+            {
+                Thread.Sleep(10);
+
+                
+                if (sr != null)
+                {
+                    break;
+                }
+                
+                // Break if timed out (will result in a null return value)
+                if (DateTime.Now - startRequest > timeout)
+                {
+                    return null;
+                }
+            }
+
+            return sr;
+        }
+
         /// <summary>
         /// Get the screenshot request for the provided process Id (if the request exists)
         /// </summary>

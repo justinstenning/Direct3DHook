@@ -125,7 +125,7 @@ namespace ScreenshotInject
     }
 
     /// <summary>
-    /// Direct3D 10 Hook - this hooks the SwapChain.Present method to capture images
+    /// Direct3D 10.1 Hook - this hooks the SwapChain.Present method to capture images
     /// </summary>
     internal class DXHookD3D10_1: BaseDXHook
     {
