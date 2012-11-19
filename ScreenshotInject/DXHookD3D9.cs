@@ -194,13 +194,40 @@ namespace ScreenshotInject
                             DateTime start = DateTime.Now;
                             try
                             {
-                                // First ensure we have a Surface to the render target data into
-                                if (_renderTarget == null)
+                                using (Surface renderTargetTemp = device.GetRenderTarget(0))
                                 {
-                                    // Create offscreen surface to use as copy of render target data
-                                    using (SwapChain sc = device.GetSwapChain(0))
+                                    int width, height;
+
+                                    // TODO: If resizing the captured image is required it can be adjusted here
+                                    //if (renderTargetTemp.Description.Width > 1280)
+                                    //{
+                                    //    width = 1280;
+                                    //    height = (int)Math.Round((renderTargetTemp.Description.Height * (1280.0 / renderTargetTemp.Description.Width)));
+                                    //}
+                                    //else
                                     {
-                                        _renderTarget = Surface.CreateOffscreenPlain(device, sc.PresentParameters.BackBufferWidth, sc.PresentParameters.BackBufferHeight, sc.PresentParameters.BackBufferFormat, Pool.SystemMemory);
+                                        width = renderTargetTemp.Description.Width;
+                                        height = renderTargetTemp.Description.Height;
+                                    }
+
+                                    // First ensure we have a Surface to the render target data into
+                                    if (_renderTarget == null)
+                                    {
+                                        // Create offscreen surface to use as copy of render target data
+                                        using (SwapChain sc = device.GetSwapChain(0))
+                                        {
+                                            _renderTarget = Surface.CreateOffscreenPlain(device, width, height, sc.PresentParameters.BackBufferFormat, Pool.SystemMemory);
+                                        }
+                                    }
+
+                                    // Create our resolved surface (resizing if necessary and to resolve any multi-sampling)
+                                    using (Surface resolvedSurface = Surface.CreateRenderTarget(device, width, height, renderTargetTemp.Description.Format, MultisampleType.None, 0, false))
+                                    {
+                                        // Resize from Render Surface to resolvedSurface
+                                        device.StretchRectangle(renderTargetTemp, resolvedSurface, TextureFilter.None);
+
+                                        // Get Render Data
+                                        device.GetRenderTargetData(resolvedSurface, _renderTarget);
                                     }
                                 }
 
@@ -233,14 +260,7 @@ namespace ScreenshotInject
                                 }
                                 #endregion
 
-                                using (Surface backBuffer = device.GetBackBuffer(0, 0))
-                                {
-                                    // Create a super fast copy of the back buffer on our Surface
-                                    device.GetRenderTargetData(backBuffer, _renderTarget);
-
-                                    // We have the back buffer data and can now work on copying it to a bitmap
-                                    ProcessRequest();
-                                }
+                                ProcessRequest();
                             }
                             finally
                             {
