@@ -100,7 +100,6 @@ namespace ScreenshotInterface
             while (true)
             {
                 Thread.Sleep(10);
-
                 
                 if (sr != null)
                 {

@@ -240,6 +240,7 @@ namespace ScreenshotInject
             if (swapChainPtr != _swapChainPointer)
             {
                 _swapChain = SlimDX.DXGI.SwapChain.FromPointer(swapChainPtr);
+                _swapChainPointer = swapChainPtr;
             }
             SwapChain swapChain = _swapChain;
 			//using (SlimDX.DXGI.SwapChain swapChain = SlimDX.DXGI.SwapChain.FromPointer(swapChainPtr))
@@ -277,6 +278,7 @@ namespace ScreenshotInject
             if (swapChainPtr != _swapChainPointer)
             {
                 _swapChain = SlimDX.DXGI.SwapChain.FromPointer(swapChainPtr);
+                _swapChainPointer = swapChainPtr;
             }
             SwapChain swapChain = _swapChain;
             {
