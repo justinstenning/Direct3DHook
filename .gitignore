@@ -1,3 +1,5 @@
-Direct3DHook.suo
-ScreenshotInject/obj
+*.suo
+*.user
+Capture/obj
 TestScreenshot/obj
+bin
