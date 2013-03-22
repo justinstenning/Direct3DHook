@@ -138,42 +138,37 @@ namespace Capture.Hook
         /// thrown if any of the underlying IO calls fail.
         /// </summary>
         /// <param name="stream">The stream to read data from</param>
-        protected static byte[] ReadFullStream(Stream stream)
+        protected static IEnumerable<byte[]> ReadFullStream(Stream stream)
         {
-            if (stream is MemoryStream)
+            while (true)
             {
-                return ((MemoryStream)stream).ToArray();
-            }
-            else
-            {
-                byte[] buffer = new byte[32768];
-                using (MemoryStream ms = new MemoryStream())
+                var buffer = new byte[84975];
+                int read = stream.Read(buffer, 0, buffer.Length);
+                if (read == buffer.Length)
                 {
-                    while (true)
-                    {
-                        int read = stream.Read(buffer, 0, buffer.Length);
-                        if (read > 0)
-                            ms.Write(buffer, 0, read);
-                        if (read < buffer.Length)
-                        {
-                            return ms.ToArray();
-                        }
-                    }
+                    yield return buffer;
+                }
+                else if (read < buffer.Length)
+                {
+                    var temp = new byte[read];
+                    Array.Copy(buffer, 0, temp, 0, read);
+                    yield return temp;
+                    yield break;
                 }
             }
         }
 
         protected void ProcessCapture(Stream stream, Guid? requestId)
         {
-            ProcessCapture(ReadFullStream(stream), requestId);
+            ProcessCapture(ReadFullStream(stream).ToArray(), requestId);
         }
 
-        protected void ProcessCapture(byte[] bitmapData, Guid? requestId)
+        protected void ProcessCapture(byte[][] bitmapData, Guid? requestId)
         {
             try
             {
                 if (requestId.HasValue)
-                    Interface.SendScreenshotResponse(new Screenshot(requestId.Value, bitmapData));
+                    Interface.SendScreenshotResponse(requestId.Value, bitmapData);
 
                 LastCaptureTime = Timer.Elapsed;
             }

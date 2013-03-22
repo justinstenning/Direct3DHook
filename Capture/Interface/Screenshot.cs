@@ -7,9 +7,9 @@ using System.IO;
 
 namespace Capture.Interface
 {
-    public class Screenshot : MarshalByRefObject
+    public class Screenshot
     {
-        public Screenshot(Guid requestId, byte[] capturedBitmap)
+        public Screenshot(Guid requestId, byte[][] capturedBitmap)
         {
             _requestId = requestId;
             _capturedBitmap = capturedBitmap;
@@ -24,8 +24,8 @@ namespace Capture.Interface
             }
         }
 
-        byte[] _capturedBitmap;
-        public byte[] CapturedBitmap
+        byte[][] _capturedBitmap;
+        public byte[][] CapturedBitmap
         {
             get
             {
@@ -36,10 +36,15 @@ namespace Capture.Interface
 
     public static class BitmapExtension
     {
-        public static Bitmap ToBitmap(this byte[] imageBytes)
+        public static Bitmap ToBitmap(this byte[][] imageBytes)
         {
-            using (MemoryStream ms = new MemoryStream(imageBytes))
+            using (MemoryStream ms = new MemoryStream())
             {
+                foreach (var imageByte in imageBytes)
+                {
+                    ms.Write(imageByte, 0, imageByte.Length);
+                }
+
                 try
                 {
                     Bitmap image = (Bitmap)Image.FromStream(ms);

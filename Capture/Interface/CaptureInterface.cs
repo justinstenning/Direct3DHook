@@ -133,7 +133,7 @@ namespace Capture.Interface
 
         object _lock = new object();
         Guid? _requestId = null;
-        Action<Screenshot> _completeScreenshot = null;
+        Action<Guid, byte[][]> _completeScreenshot = null;
         ManualResetEvent _wait = new ManualResetEvent(false);
 
         /// <summary>
@@ -153,13 +153,13 @@ namespace Capture.Interface
         {
             lock (_lock)
             {
-                Screenshot result = null;
+                byte[][] result = null;
                 _requestId = Guid.NewGuid();
                 _wait.Reset();
 
                 SafeInvokeScreenshotRequested(new ScreenshotRequest(_requestId.Value, region));
 
-                _completeScreenshot = (sc) =>
+                _completeScreenshot = (id, sc) =>
                 {
                     try
                     {
@@ -174,7 +174,7 @@ namespace Capture.Interface
 
                 _wait.WaitOne(timeout);
                 _completeScreenshot = null;
-                return result;
+                return new Screenshot(_requestId.Value, result);
             }
         }
 
@@ -196,13 +196,13 @@ namespace Capture.Interface
                 return null;
         }
 
-        public void SendScreenshotResponse(Screenshot screenshot)
+        public void SendScreenshotResponse(Guid requestId, byte[][] screenshot)
         {
-            if (_requestId != null && screenshot != null && screenshot.RequestId == _requestId.Value)
+            if (_requestId != null && screenshot != null && requestId == _requestId.Value)
             {
                 if (_completeScreenshot != null)
                 {
-                    _completeScreenshot(screenshot);
+                    _completeScreenshot(requestId, screenshot);
                 }
             }
         }
