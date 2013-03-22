@@ -9,12 +9,15 @@ namespace Capture.Interface
     public class ScreenshotReceivedEventArgs: MarshalByRefObject
     {
         public Int32 ProcessId { get; set; }
-        public Screenshot Screenshot { get; set; }
+        public byte[][] Screenshot { get; set; }
 
-        public ScreenshotReceivedEventArgs(Int32 processId, Screenshot screenshot)
+        public Guid RequestId { get; set; }
+
+        public ScreenshotReceivedEventArgs(Int32 processId, byte[][] screenshot, Guid requestId)
         {
             ProcessId = processId;
             Screenshot = screenshot;
+            RequestId = requestId;
         }
     }
 }
