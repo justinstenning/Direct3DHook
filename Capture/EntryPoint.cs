@@ -11,6 +11,7 @@ namespace Capture
 {
     public class EntryPoint: EasyHook.IEntryPoint
     {
+        List<IDXHook> _directXHooks = new List<IDXHook>();
         IDXHook _directXHook = null;
         private CaptureInterface _interface;
         private System.Threading.ManualResetEvent _runWait;
@@ -120,7 +121,7 @@ namespace Capture
 
         private void DisposeDirectXHook()
         {
-            if (_directXHook != null)
+            if (_directXHooks != null)
             {
                 try
                 {
@@ -129,13 +130,18 @@ namespace Capture
                 catch (System.Runtime.Remoting.RemotingException) { } // Ignore channel remoting errors
 
                 // Dispose of the hooks so they are removed
-                _directXHook.Dispose();
+                foreach (var dxHook in _directXHooks)
+                    dxHook.Dispose();
+
+                _directXHooks.Clear();
             }
         }
 
         private bool InitialiseDirectXHook(CaptureConfig config)
         {
             Direct3DVersion version = config.Direct3DVersion;
+
+            List<Direct3DVersion> loadedVersions = new List<Direct3DVersion>();
 
             bool isX64Process = EasyHook.RemoteHooking.IsX64Process(EasyHook.RemoteHooking.GetCurrentProcessId());
             _interface.Message(MessageType.Information, "Remote process is a {0}-bit process.", isX64Process ? "64" : "32");
@@ -177,53 +183,64 @@ namespace Capture
                     {
                         _interface.Message(MessageType.Debug, "Autodetect found Direct3D 11.1");
                         version = Direct3DVersion.Direct3D11_1;
+                        loadedVersions.Add(version);
                     }
-                    else if (d3D11Loaded != IntPtr.Zero)
+                    if (d3D11Loaded != IntPtr.Zero)
                     {
                         _interface.Message(MessageType.Debug, "Autodetect found Direct3D 11");
                         version = Direct3DVersion.Direct3D11;
+                        loadedVersions.Add(version);
                     }
-                    else if (d3D10_1Loaded != IntPtr.Zero)
+                    if (d3D10_1Loaded != IntPtr.Zero)
                     {
                         _interface.Message(MessageType.Debug, "Autodetect found Direct3D 10.1");
                         version = Direct3DVersion.Direct3D10_1;
+                        loadedVersions.Add(version);
                     }
-                    else if (d3D10Loaded != IntPtr.Zero)
+                    if (d3D10Loaded != IntPtr.Zero)
                     {
                         _interface.Message(MessageType.Debug, "Autodetect found Direct3D 10");
                         version = Direct3DVersion.Direct3D10;
+                        loadedVersions.Add(version);
                     }
-                    else if (d3D9Loaded != IntPtr.Zero)
+                    if (d3D9Loaded != IntPtr.Zero)
                     {
                         _interface.Message(MessageType.Debug, "Autodetect found Direct3D 9");
                         version = Direct3DVersion.Direct3D9;
+                        loadedVersions.Add(version);
                     }
                 }
 
-                switch (version)
+                foreach (var dxVersion in loadedVersions)
                 {
-                    case Direct3DVersion.Direct3D9:
-                        _directXHook = new DXHookD3D9(_interface);
-                        break;
-                    case Direct3DVersion.Direct3D10:
-                        _directXHook = new DXHookD3D10(_interface);
-                        break;
-                    case Direct3DVersion.Direct3D10_1:
-                        _directXHook = new DXHookD3D10_1(_interface);
-                        break;
-                    case Direct3DVersion.Direct3D11:
-                        _directXHook = new DXHookD3D11(_interface);
-                        break;
-                    //case Direct3DVersion.Direct3D11_1:
-                    //    _directXHook = new DXHookD3D11_1(_interface);
-                    //    return;
-                    default:
-                        _interface.Message(MessageType.Error, "Unsupported Direct3D version: {0}", version);
-                        return false;
-                }
+                    version = dxVersion;
+                    switch (version)
+                    {
+                        case Direct3DVersion.Direct3D9:
+                            _directXHook = new DXHookD3D9(_interface);
+                            break;
+                        case Direct3DVersion.Direct3D10:
+                            _directXHook = new DXHookD3D10(_interface);
+                            break;
+                        case Direct3DVersion.Direct3D10_1:
+                            _directXHook = new DXHookD3D10_1(_interface);
+                            break;
+                        case Direct3DVersion.Direct3D11:
+                            _directXHook = new DXHookD3D11(_interface);
+                            break;
+                        //case Direct3DVersion.Direct3D11_1:
+                        //    _directXHook = new DXHookD3D11_1(_interface);
+                        //    return;
+                        default:
+                            _interface.Message(MessageType.Error, "Unsupported Direct3D version: {0}", version);
+                            return false;
+                    }
 
-                _directXHook.Config = config;
-                _directXHook.Hook();
+                    _directXHook.Config = config;
+                    _directXHook.Hook();
+
+                    _directXHooks.Add(_directXHook);
+                }
 
                 return true;
 
