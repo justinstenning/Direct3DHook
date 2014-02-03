@@ -249,8 +249,8 @@ namespace Capture.Interface
         /// <param name="duration"></param>
         public void DisplayInGameText(string text, TimeSpan duration)
         {
-            if (duration.TotalMilliseconds < 0)
-                throw new ArgumentException("Duration must be more than 0", "duration");
+            if (duration.TotalMilliseconds <= 0)
+                throw new ArgumentException("Duration must be larger than 0", "duration");
             SafeInvokeDisplayText(new DisplayTextEventArgs(text, duration));
         }
 

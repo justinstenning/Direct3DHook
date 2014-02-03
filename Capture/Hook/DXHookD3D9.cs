@@ -49,10 +49,13 @@ namespace Capture.Hook
             this.DebugMessage("Hook: Before device creation");
             using (Direct3D d3d = new Direct3D())
             {
-                this.DebugMessage("Hook: Device created");
-                using (device = new Device(d3d, 0, DeviceType.NullReference, IntPtr.Zero, CreateFlags.HardwareVertexProcessing, new PresentParameters() { BackBufferWidth = 1, BackBufferHeight = 1 }))
+                using (var renderForm = new System.Windows.Forms.Form())
                 {
-                    id3dDeviceFunctionAddresses.AddRange(GetVTblAddresses(device.NativePointer, D3D9_DEVICE_METHOD_COUNT));
+                    using (device = new Device(d3d, 0, DeviceType.NullReference, IntPtr.Zero, CreateFlags.HardwareVertexProcessing, new PresentParameters() { BackBufferWidth = 1, BackBufferHeight = 1, DeviceWindowHandle = renderForm.Handle }))
+                    {
+                        this.DebugMessage("Hook: Device created");
+                        id3dDeviceFunctionAddresses.AddRange(GetVTblAddresses(device.NativePointer, D3D9_DEVICE_METHOD_COUNT));
+                    }
                 }
             }
 
@@ -61,10 +64,14 @@ namespace Capture.Hook
                 using (Direct3DEx d3dEx = new Direct3DEx())
                 {
                     this.DebugMessage("Hook: Direct3DEx...");
-                    using (var deviceEx = new DeviceEx(d3dEx, 0, DeviceType.NullReference, IntPtr.Zero, CreateFlags.HardwareVertexProcessing, new PresentParameters() { BackBufferWidth = 1, BackBufferHeight = 1 }, new DisplayModeEx() { Width = 800, Height = 600 }))
+                    using (var renderForm = new System.Windows.Forms.Form())
                     {
-                        id3dDeviceFunctionAddresses.AddRange(GetVTblAddresses(deviceEx.NativePointer, D3D9_DEVICE_METHOD_COUNT, D3D9Ex_DEVICE_METHOD_COUNT));
-                        _supportsDirect3D9Ex = true;
+                        using (var deviceEx = new DeviceEx(d3dEx, 0, DeviceType.NullReference, IntPtr.Zero, CreateFlags.HardwareVertexProcessing, new PresentParameters() { BackBufferWidth = 1, BackBufferHeight = 1, DeviceWindowHandle = renderForm.Handle }, new DisplayModeEx() { Width = 800, Height = 600 }))
+                        {
+                            this.DebugMessage("Hook: DeviceEx created - PresentEx supported");
+                            id3dDeviceFunctionAddresses.AddRange(GetVTblAddresses(deviceEx.NativePointer, D3D9_DEVICE_METHOD_COUNT, D3D9Ex_DEVICE_METHOD_COUNT));
+                            _supportsDirect3D9Ex = true;
+                        }
                     }
                 }
             }
