@@ -26,6 +26,8 @@ namespace Capture.Hook
             this.FPS = new FramesPerSecond();
 
             Interface.ScreenshotRequested += InterfaceEventProxy.ScreenshotRequestedProxyHandler;
+            Interface.RecordingStarted += InterfaceEventProxy.RecordingStartedProxyHandler;
+            Interface.RecordingStopped += InterfaceEventProxy.RecordingStoppedProxyHandler;
             Interface.DisplayText += InterfaceEventProxy.DisplayTextProxyHandler;
             InterfaceEventProxy.ScreenshotRequested += new ScreenshotRequestedEvent(InterfaceEventProxy_ScreenshotRequested);
             InterfaceEventProxy.DisplayText += new DisplayTextEvent(InterfaceEventProxy_DisplayText);
@@ -89,10 +91,23 @@ namespace Capture.Hook
 
         protected void DebugMessage(string message)
         {
-#if DEBUG
+            // TODO: enable #ifdebug again to avoid to much IPC comms
             try
             {
                 Interface.Message(MessageType.Debug, HookName + ": " + message);
+            }
+            catch (RemotingException)
+            {
+                // Ignore remoting exceptions
+            }
+        }
+
+        protected void TraceMessage(string message)
+        {
+#if DEBUG
+            try
+            {
+                Interface.Message(MessageType.Trace, HookName + ": " + message);
             }
             catch (RemotingException)
             {
@@ -112,9 +127,14 @@ namespace Capture.Hook
 
             IntPtr vTable = Marshal.ReadIntPtr(pointer);
             for (int i = startIndex; i < startIndex + numberOfMethods; i++)
-                vtblAddresses.Add(Marshal.ReadIntPtr(vTable, i * IntPtr.Size)); // using IntPtr.Size allows us to support both 32 and 64-bit processes
+                vtblAddresses.Add(GetVTblAddress(vTable, i));
 
             return vtblAddresses.ToArray();
+        }
+
+        protected IntPtr GetVTblAddress(IntPtr vTable, int i)
+        {
+            return Marshal.ReadIntPtr(vTable, i * IntPtr.Size); // using IntPtr.Size allows us to support both 32 and 64-bit processes
         }
 
         protected static void CopyStream(Stream input, Stream output)
@@ -140,24 +160,23 @@ namespace Capture.Hook
         /// <param name="stream">The stream to read data from</param>
         protected static byte[] ReadFullStream(Stream stream)
         {
-            if (stream is MemoryStream)
+            var memoryStream = stream as MemoryStream;
+            if (memoryStream != null)
             {
-                return ((MemoryStream)stream).ToArray();
+                return memoryStream.ToArray();
             }
-            else
+            
+            var buffer = new byte[32768];
+            using (var ms = new MemoryStream())
             {
-                byte[] buffer = new byte[32768];
-                using (MemoryStream ms = new MemoryStream())
+                while (true)
                 {
-                    while (true)
+                    int read = stream.Read(buffer, 0, buffer.Length);
+                    if (read > 0)
+                        ms.Write(buffer, 0, read);
+                    if (read < buffer.Length)
                     {
-                        int read = stream.Read(buffer, 0, buffer.Length);
-                        if (read > 0)
-                            ms.Write(buffer, 0, read);
-                        if (read < buffer.Length)
-                        {
-                            return ms.ToArray();
-                        }
+                        return ms.ToArray();
                     }
                 }
             }
@@ -165,29 +184,40 @@ namespace Capture.Hook
 
         protected void ProcessCapture(Stream stream, Guid? requestId)
         {
-            ProcessCapture(ReadFullStream(stream), requestId);
+            if (!requestId.HasValue)
+            {
+                DebugMessage("No requestId specified.");
+                return;
+            }
+
+            ProcessCapture(new RetrieveImageDataParams()
+                               {
+                                   Data = ReadFullStream(stream),
+                                   RequestId = requestId.Value,
+                               });
         }
 
-        protected void ProcessCapture(byte[] bitmapData, Guid? requestId)
+        protected void ProcessCapture(RetrieveImageDataParams data)
         {
+            var screenshot = new Screenshot(data.RequestId, data.Data, data.Width, data.Height, data.Pitch);
             try
             {
-                if (requestId.HasValue)
-                    Interface.SendScreenshotResponse(new Screenshot(requestId.Value, bitmapData));
-
+                Interface.SendScreenshotResponse(screenshot);
                 LastCaptureTime = Timer.Elapsed;
             }
-            catch (RemotingException)
+            catch (RemotingException ex)
             {
+                TraceMessage("RemotingException: " + ex.Message);
+                screenshot.Dispose();
                 // Ignore remoting exceptions
                 // .NET Remoting will throw an exception if the host application is unreachable
             }
             catch (Exception e)
             {
                 DebugMessage(e.ToString());
+                screenshot.Dispose();
             }
         }
-
 
         private ImageCodecInfo GetEncoder(ImageFormat format)
         {

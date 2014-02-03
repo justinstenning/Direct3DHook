@@ -92,7 +92,9 @@
     <Compile Include="Hook\DX11\DXFont.cs" />
     <Compile Include="Hook\DX11\DXSprite.cs" />
     <Compile Include="Hook\FramesPerSecond.cs" />
+    <Compile Include="Hook\HookData.cs" />
     <Compile Include="Hook\HookManager.cs" />
+    <Compile Include="Hook\RetrieveImageDataParams.cs" />
     <Compile Include="Hook\TextDisplay.cs" />
     <Compile Include="Interface\CaptureConfig.cs" />
     <Compile Include="EntryPoint.cs" />
@@ -105,8 +107,11 @@
     <Compile Include="Hook\DXHookD3D9.cs" />
     <Compile Include="Hook\IDXHook.cs" />
     <Compile Include="Interface\CaptureInterface.cs" />
+    <Compile Include="Interface\ClientCaptureInterfaceEventProxy.cs" />
+    <Compile Include="Interface\Direct3DVersion.cs" />
     <Compile Include="Interface\DisplayTextEventArgs.cs" />
     <Compile Include="Interface\MessageReceivedEventArgs.cs" />
+    <Compile Include="Interface\MessageType.cs" />
     <Compile Include="Interface\Screenshot.cs" />
     <Compile Include="Interface\ScreenshotReceivedEventArgs.cs" />
     <Compile Include="Interface\ScreenshotRequestedEventArgs.cs" />
