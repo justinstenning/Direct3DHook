@@ -231,7 +231,7 @@ namespace TestScreenshot
         /// <param name="screenshotResponse"></param>
         void Callback(IAsyncResult result)
         {
-            Screenshot screenshot = _captureProcess.CaptureInterface.EndGetScreenshot(result);
+            using (Screenshot screenshot = _captureProcess.CaptureInterface.EndGetScreenshot(result))
             try
             {
                 _captureProcess.CaptureInterface.DisplayInGameText("Screenshot captured...");
