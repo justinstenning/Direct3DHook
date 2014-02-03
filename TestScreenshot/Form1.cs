@@ -19,6 +19,8 @@ using Capture;
 
 namespace TestScreenshot
 {
+    using System.Drawing.Imaging;
+
     public partial class Form1 : Form
     {
         public Form1()
@@ -243,7 +245,21 @@ namespace TestScreenshot
                         {
                             pictureBox1.Image.Dispose();
                         }
-                        pictureBox1.Image = screenshot.CapturedBitmap.ToBitmap();
+                        if (screenshot.Height > 0 && screenshot.Width > 0)
+                        {
+                            var width = screenshot.Width;
+                            var height = screenshot.Height;
+                            var bitmapData = screenshot.CapturedBitmap;
+                            var img = new Bitmap(width, height, PixelFormat.Format32bppRgb);
+                            var bmpData = img.LockBits(new Rectangle(0, 0, img.Width, img.Height), ImageLockMode.WriteOnly, img.PixelFormat);
+                            Marshal.Copy(bitmapData, 0, bmpData.Scan0, bitmapData.Length);
+                            img.UnlockBits(bmpData);
+                            pictureBox1.Image = img;
+                        }
+                        else
+                        {
+                            pictureBox1.Image = screenshot.CapturedBitmap.ToBitmap();                            
+                        }
                     })
                     );
                 }

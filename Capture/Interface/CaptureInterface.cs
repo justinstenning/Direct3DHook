@@ -7,17 +7,6 @@ using System.Threading;
 
 namespace Capture.Interface
 {
-    public enum Direct3DVersion
-    {
-        Unknown,
-        AutoDetect,
-        Direct3D9,
-        Direct3D10,
-        Direct3D10_1,
-        Direct3D11,
-        Direct3D11_1,
-    }
-
     [Serializable]
     public delegate void RecordingStartedEvent(CaptureConfig config);
     [Serializable]
@@ -32,14 +21,6 @@ namespace Capture.Interface
     public delegate void ScreenshotRequestedEvent(ScreenshotRequest request);
     [Serializable]
     public delegate void DisplayTextEvent(DisplayTextEventArgs args);
-
-    public enum MessageType
-    {
-        Debug,
-        Information,
-        Warning,
-        Error
-    }
 
     [Serializable]
     public class CaptureInterface : MarshalByRefObject
@@ -214,6 +195,11 @@ namespace Capture.Interface
         /// </summary>
         public void Disconnect()
         {
+            if (IsRecording)
+            {
+                StopRecording();
+            }
+
             SafeInvokeDisconnected();
         }
 
@@ -434,84 +420,6 @@ namespace Capture.Interface
         public void Ping()
         {
             
-        }
-    }
-
-
-    /// <summary>
-    /// Client event proxy for marshalling event handlers
-    /// </summary>
-    public class ClientCaptureInterfaceEventProxy : MarshalByRefObject
-    {
-        #region Event Declarations
-
-        /// <summary>
-        /// Client event used to communicate to the client that it is time to start recording
-        /// </summary>
-        public event RecordingStartedEvent RecordingStarted;
-
-        /// <summary>
-        /// Client event used to communicate to the client that it is time to stop recording
-        /// </summary>
-        public event RecordingStoppedEvent RecordingStopped;
-
-        /// <summary>
-        /// Client event used to communicate to the client that it is time to create a screenshot
-        /// </summary>
-        public event ScreenshotRequestedEvent ScreenshotRequested;
-
-        /// <summary>
-        /// Client event used to notify the hook to exit
-        /// </summary>
-        public event DisconnectedEvent Disconnected;
-
-        /// <summary>
-        /// Client event used to display in-game text
-        /// </summary>
-        public event DisplayTextEvent DisplayText;
-
-        #endregion
-
-        #region Lifetime Services
-
-        public override object InitializeLifetimeService()
-        {
-            //Returning null holds the object alive
-            //until it is explicitly destroyed
-            return null;
-        }
-
-        #endregion
-
-        public void RecordingStartedProxyHandler(CaptureConfig config)
-        {
-            if (RecordingStarted != null)
-                RecordingStarted(config);
-        }
-
-        public void RecordingStoppedProxyHandler()
-        {
-            if (RecordingStopped != null)
-                RecordingStopped();
-        }
-
-
-        public void DisconnectedProxyHandler()
-        {
-            if (Disconnected != null)
-                Disconnected();
-        }
-
-        public void ScreenshotRequestedProxyHandler(ScreenshotRequest request)
-        {
-            if (ScreenshotRequested != null)
-                ScreenshotRequested(request);
-        }
-
-        public void DisplayTextProxyHandler(DisplayTextEventArgs args)
-        {
-            if (DisplayText != null)
-                DisplayText(args);
         }
     }
 }
