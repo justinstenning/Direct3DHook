@@ -439,7 +439,7 @@ namespace Capture.Hook
                 }
                 else if (Request.RegionToCapture.Height > 0)
                 {
-                    retrieveParams.Stream = Surface.ToStream(_renderTarget, ImageFileFormat.Bmp, new SharpDX.Rectangle(region.Left, region.Top, region.Right, region.Bottom));
+                    retrieveParams.Stream = Surface.ToStream(_renderTarget, ImageFileFormat.Bmp, new SharpDX.Rectangle(region.X, region.Y, region.Width, region.Height));
                 }
 
                 if (retrieveParams.Stream != null)
