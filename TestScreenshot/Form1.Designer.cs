@@ -54,6 +54,14 @@
             this.cbDrawOverlay = new System.Windows.Forms.CheckBox();
             this.rbAutodetect = new System.Windows.Forms.RadioButton();
             this.rbDirect3D10_1 = new System.Windows.Forms.RadioButton();
+            this.label8 = new System.Windows.Forms.Label();
+            this.label9 = new System.Windows.Forms.Label();
+            this.txtResizeHeight = new System.Windows.Forms.TextBox();
+            this.txtResizeWidth = new System.Windows.Forms.TextBox();
+            this.label10 = new System.Windows.Forms.Label();
+            this.label11 = new System.Windows.Forms.Label();
+            this.label12 = new System.Windows.Forms.Label();
+            this.cmbFormat = new System.Windows.Forms.ComboBox();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).BeginInit();
             this.SuspendLayout();
             // 
@@ -125,7 +133,7 @@
             // label1
             // 
             this.label1.AutoSize = true;
-            this.label1.Location = new System.Drawing.Point(3, 167);
+            this.label1.Location = new System.Drawing.Point(12, 180);
             this.label1.Name = "label1";
             this.label1.Size = new System.Drawing.Size(14, 13);
             this.label1.TabIndex = 7;
@@ -134,7 +142,7 @@
             // label2
             // 
             this.label2.AutoSize = true;
-            this.label2.Location = new System.Drawing.Point(3, 193);
+            this.label2.Location = new System.Drawing.Point(120, 180);
             this.label2.Name = "label2";
             this.label2.Size = new System.Drawing.Size(14, 13);
             this.label2.TabIndex = 8;
@@ -143,7 +151,7 @@
             // label3
             // 
             this.label3.AutoSize = true;
-            this.label3.Location = new System.Drawing.Point(3, 221);
+            this.label3.Location = new System.Drawing.Point(7, 206);
             this.label3.Name = "label3";
             this.label3.Size = new System.Drawing.Size(35, 13);
             this.label3.TabIndex = 9;
@@ -152,7 +160,7 @@
             // label4
             // 
             this.label4.AutoSize = true;
-            this.label4.Location = new System.Drawing.Point(3, 247);
+            this.label4.Location = new System.Drawing.Point(96, 206);
             this.label4.Name = "label4";
             this.label4.Size = new System.Drawing.Size(38, 13);
             this.label4.TabIndex = 10;
@@ -160,44 +168,44 @@
             // 
             // txtCaptureX
             // 
-            this.txtCaptureX.Location = new System.Drawing.Point(66, 164);
+            this.txtCaptureX.Location = new System.Drawing.Point(43, 177);
             this.txtCaptureX.Name = "txtCaptureX";
-            this.txtCaptureX.Size = new System.Drawing.Size(100, 20);
+            this.txtCaptureX.Size = new System.Drawing.Size(47, 20);
             this.txtCaptureX.TabIndex = 11;
             this.txtCaptureX.Text = "0";
             // 
             // txtCaptureY
             // 
-            this.txtCaptureY.Location = new System.Drawing.Point(66, 190);
+            this.txtCaptureY.Location = new System.Drawing.Point(140, 177);
             this.txtCaptureY.Name = "txtCaptureY";
-            this.txtCaptureY.Size = new System.Drawing.Size(100, 20);
+            this.txtCaptureY.Size = new System.Drawing.Size(47, 20);
             this.txtCaptureY.TabIndex = 12;
             this.txtCaptureY.Text = "0";
             // 
             // txtCaptureWidth
             // 
-            this.txtCaptureWidth.Location = new System.Drawing.Point(66, 218);
+            this.txtCaptureWidth.Location = new System.Drawing.Point(43, 203);
             this.txtCaptureWidth.Name = "txtCaptureWidth";
-            this.txtCaptureWidth.Size = new System.Drawing.Size(100, 20);
+            this.txtCaptureWidth.Size = new System.Drawing.Size(47, 20);
             this.txtCaptureWidth.TabIndex = 13;
             this.txtCaptureWidth.Text = "0";
             // 
             // txtCaptureHeight
             // 
-            this.txtCaptureHeight.Location = new System.Drawing.Point(66, 244);
+            this.txtCaptureHeight.Location = new System.Drawing.Point(140, 203);
             this.txtCaptureHeight.Name = "txtCaptureHeight";
-            this.txtCaptureHeight.Size = new System.Drawing.Size(100, 20);
+            this.txtCaptureHeight.Size = new System.Drawing.Size(47, 20);
             this.txtCaptureHeight.TabIndex = 14;
             this.txtCaptureHeight.Text = "0";
             // 
             // label5
             // 
             this.label5.AutoSize = true;
-            this.label5.Location = new System.Drawing.Point(63, 267);
+            this.label5.Location = new System.Drawing.Point(7, 226);
             this.label5.Name = "label5";
-            this.label5.Size = new System.Drawing.Size(93, 39);
+            this.label5.Size = new System.Drawing.Size(184, 13);
             this.label5.TabIndex = 15;
-            this.label5.Text = "Width of 0 means \r\ncapture whole \r\nwindow";
+            this.label5.Text = "Width of 0 means capture full window";
             // 
             // txtDebugLog
             // 
@@ -302,11 +310,92 @@
             this.rbDirect3D10_1.Text = "Direct3D 10.1";
             this.rbDirect3D10_1.UseVisualStyleBackColor = true;
             // 
+            // label8
+            // 
+            this.label8.AutoSize = true;
+            this.label8.Location = new System.Drawing.Point(6, 164);
+            this.label8.Name = "label8";
+            this.label8.Size = new System.Drawing.Size(52, 13);
+            this.label8.TabIndex = 27;
+            this.label8.Text = "REGION:";
+            // 
+            // label9
+            // 
+            this.label9.AutoSize = true;
+            this.label9.Location = new System.Drawing.Point(5, 241);
+            this.label9.Name = "label9";
+            this.label9.Size = new System.Drawing.Size(149, 13);
+            this.label9.TabIndex = 28;
+            this.label9.Text = "RESIZE: (will maintain aspect)";
+            // 
+            // txtResizeHeight
+            // 
+            this.txtResizeHeight.Location = new System.Drawing.Point(140, 255);
+            this.txtResizeHeight.Name = "txtResizeHeight";
+            this.txtResizeHeight.Size = new System.Drawing.Size(47, 20);
+            this.txtResizeHeight.TabIndex = 32;
+            // 
+            // txtResizeWidth
+            // 
+            this.txtResizeWidth.Location = new System.Drawing.Point(43, 255);
+            this.txtResizeWidth.Name = "txtResizeWidth";
+            this.txtResizeWidth.Size = new System.Drawing.Size(47, 20);
+            this.txtResizeWidth.TabIndex = 31;
+            // 
+            // label10
+            // 
+            this.label10.AutoSize = true;
+            this.label10.Location = new System.Drawing.Point(96, 258);
+            this.label10.Name = "label10";
+            this.label10.Size = new System.Drawing.Size(38, 13);
+            this.label10.TabIndex = 30;
+            this.label10.Text = "Height";
+            // 
+            // label11
+            // 
+            this.label11.AutoSize = true;
+            this.label11.Location = new System.Drawing.Point(7, 258);
+            this.label11.Name = "label11";
+            this.label11.Size = new System.Drawing.Size(35, 13);
+            this.label11.TabIndex = 29;
+            this.label11.Text = "Width";
+            // 
+            // label12
+            // 
+            this.label12.AutoSize = true;
+            this.label12.Location = new System.Drawing.Point(3, 284);
+            this.label12.Name = "label12";
+            this.label12.Size = new System.Drawing.Size(55, 13);
+            this.label12.TabIndex = 33;
+            this.label12.Text = "FORMAT:";
+            // 
+            // cmbFormat
+            // 
+            this.cmbFormat.FormattingEnabled = true;
+            this.cmbFormat.Items.AddRange(new object[] {
+            "Bitmap",
+            "Jpeg",
+            "Png",
+            "PixelData"});
+            this.cmbFormat.Location = new System.Drawing.Point(65, 282);
+            this.cmbFormat.Name = "cmbFormat";
+            this.cmbFormat.Size = new System.Drawing.Size(121, 21);
+            this.cmbFormat.TabIndex = 34;
+            this.cmbFormat.Text = "Bitmap";
+            // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(1002, 526);
+            this.Controls.Add(this.cmbFormat);
+            this.Controls.Add(this.label12);
+            this.Controls.Add(this.txtResizeHeight);
+            this.Controls.Add(this.txtResizeWidth);
+            this.Controls.Add(this.label10);
+            this.Controls.Add(this.label11);
+            this.Controls.Add(this.label9);
+            this.Controls.Add(this.label8);
             this.Controls.Add(this.rbDirect3D10_1);
             this.Controls.Add(this.rbAutodetect);
             this.Controls.Add(this.cbDrawOverlay);
@@ -370,6 +459,14 @@
         private System.Windows.Forms.CheckBox cbDrawOverlay;
         private System.Windows.Forms.RadioButton rbAutodetect;
         private System.Windows.Forms.RadioButton rbDirect3D10_1;
+        private System.Windows.Forms.Label label8;
+        private System.Windows.Forms.Label label9;
+        private System.Windows.Forms.TextBox txtResizeHeight;
+        private System.Windows.Forms.TextBox txtResizeWidth;
+        private System.Windows.Forms.Label label10;
+        private System.Windows.Forms.Label label11;
+        private System.Windows.Forms.Label label12;
+        private System.Windows.Forms.ComboBox cmbFormat;
     }
 }
 

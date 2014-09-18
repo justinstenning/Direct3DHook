@@ -7,17 +7,6 @@ using System.Threading;
 
 namespace Capture.Interface
 {
-    public enum Direct3DVersion
-    {
-        Unknown,
-        AutoDetect,
-        Direct3D9,
-        Direct3D10,
-        Direct3D10_1,
-        Direct3D11,
-        Direct3D11_1,
-    }
-
     [Serializable]
     public delegate void RecordingStartedEvent(CaptureConfig config);
     [Serializable]
@@ -32,14 +21,6 @@ namespace Capture.Interface
     public delegate void ScreenshotRequestedEvent(ScreenshotRequest request);
     [Serializable]
     public delegate void DisplayTextEvent(DisplayTextEventArgs args);
-
-    public enum MessageType
-    {
-        Debug,
-        Information,
-        Warning,
-        Error
-    }
 
     [Serializable]
     public class CaptureInterface : MarshalByRefObject
@@ -141,7 +122,7 @@ namespace Capture.Interface
         /// </summary>
         public Screenshot GetScreenshot()
         {
-            return GetScreenshot(Rectangle.Empty, new TimeSpan(0, 0, 2));
+            return GetScreenshot(Rectangle.Empty, new TimeSpan(0, 0, 2), null, ImageFormat.Bitmap);
         }
 
         /// <summary>
@@ -149,7 +130,7 @@ namespace Capture.Interface
         /// </summary>
         /// <param name="region">the region to capture (x=0,y=0 is top left corner)</param>
         /// <param name="timeout">maximum time to wait for the screenshot</param>
-        public Screenshot GetScreenshot(Rectangle region, TimeSpan timeout)
+        public Screenshot GetScreenshot(Rectangle region, TimeSpan timeout, Size? resize, ImageFormat format)
         {
             lock (_lock)
             {
@@ -157,7 +138,11 @@ namespace Capture.Interface
                 _requestId = Guid.NewGuid();
                 _wait.Reset();
 
-                SafeInvokeScreenshotRequested(new ScreenshotRequest(_requestId.Value, region));
+                SafeInvokeScreenshotRequested(new ScreenshotRequest(_requestId.Value, region)
+                {
+                    Format = format,
+                    Resize = resize,
+                });
 
                 _completeScreenshot = (sc) =>
                 {
@@ -178,16 +163,16 @@ namespace Capture.Interface
             }
         }
 
-        public IAsyncResult BeginGetScreenshot(Rectangle region, TimeSpan timeout, AsyncCallback callback = null)
+        public IAsyncResult BeginGetScreenshot(Rectangle region, TimeSpan timeout, AsyncCallback callback = null, Size? resize = null, ImageFormat format = ImageFormat.Bitmap)
         {
-            Func<Rectangle, TimeSpan, Screenshot> getScreenshot = GetScreenshot;
+            Func<Rectangle, TimeSpan, Size?, ImageFormat, Screenshot> getScreenshot = GetScreenshot;
             
-            return getScreenshot.BeginInvoke(region, timeout, callback, getScreenshot);
+            return getScreenshot.BeginInvoke(region, timeout, resize, format, callback, getScreenshot);
         }
 
         public Screenshot EndGetScreenshot(IAsyncResult result)
         {
-            Func<Rectangle, TimeSpan, Screenshot> getScreenshot = result.AsyncState as Func<Rectangle, TimeSpan, Screenshot>;
+            Func<Rectangle, TimeSpan, Size?, ImageFormat, Screenshot> getScreenshot = result.AsyncState as Func<Rectangle, TimeSpan, Size?, ImageFormat, Screenshot>;
             if (getScreenshot != null)
             {
                 return getScreenshot.EndInvoke(result);

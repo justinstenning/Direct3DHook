@@ -129,7 +129,7 @@ namespace TestScreenshot
                 var captureInterface = new CaptureInterface();
                 captureInterface.RemoteMessage += new MessageReceivedEvent(CaptureInterface_RemoteMessage);
                 _captureProcess = new CaptureProcess(process, cc, captureInterface);
-
+                
                 break;
             }
             Thread.Sleep(10);
@@ -212,7 +212,10 @@ namespace TestScreenshot
 
                         _captureProcess.BringProcessWindowToFront();
                         // Initiate the screenshot of the CaptureInterface, the appropriate event handler within the target process will take care of the rest
-                        _captureProcess.CaptureInterface.BeginGetScreenshot(new Rectangle(int.Parse(txtCaptureX.Text), int.Parse(txtCaptureY.Text), int.Parse(txtCaptureWidth.Text), int.Parse(txtCaptureHeight.Text)), new TimeSpan(0, 0, 2), Callback);
+                        Size? resize = null;
+                        if (!String.IsNullOrEmpty(txtResizeHeight.Text) && !String.IsNullOrEmpty(txtResizeWidth.Text))
+                            resize = new System.Drawing.Size(int.Parse(txtResizeWidth.Text), int.Parse(txtResizeHeight.Text));
+                        _captureProcess.CaptureInterface.BeginGetScreenshot(new Rectangle(int.Parse(txtCaptureX.Text), int.Parse(txtCaptureY.Text), int.Parse(txtCaptureWidth.Text), int.Parse(txtCaptureHeight.Text)), new TimeSpan(0, 0, 2), Callback, resize, (ImageFormat)Enum.Parse(typeof(ImageFormat), cmbFormat.Text));
                     }
                     else
                     {
@@ -235,7 +238,7 @@ namespace TestScreenshot
             try
             {
                 _captureProcess.CaptureInterface.DisplayInGameText("Screenshot captured...");
-                if (screenshot != null && screenshot.CapturedBitmap != null)
+                if (screenshot != null && screenshot.Data != null)
                 {
                     pictureBox1.Invoke(new MethodInvoker(delegate()
                     {
@@ -243,7 +246,7 @@ namespace TestScreenshot
                         {
                             pictureBox1.Image.Dispose();
                         }
-                        pictureBox1.Image = screenshot.CapturedBitmap.ToBitmap();
+                        pictureBox1.Image = screenshot.ToBitmap();
                     })
                     );
                 }

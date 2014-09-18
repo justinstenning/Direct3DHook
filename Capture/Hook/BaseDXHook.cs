@@ -14,7 +14,7 @@ using System.Threading;
 
 namespace Capture.Hook
 {
-    internal abstract class BaseDXHook: IDXHook
+    internal abstract class BaseDXHook: SharpDX.Component, IDXHook
     {
         protected readonly ClientCaptureInterfaceEventProxy InterfaceEventProxy = new ClientCaptureInterfaceEventProxy();
 
@@ -163,18 +163,109 @@ namespace Capture.Hook
             }
         }
 
-        protected void ProcessCapture(Stream stream, Guid? requestId)
+        /// <summary>
+        /// Process the capture based on the requested format.
+        /// </summary>
+        /// <param name="width">image width</param>
+        /// <param name="height">image height</param>
+        /// <param name="pitch">data pitch (bytes per row)</param>
+        /// <param name="format">target format</param>
+        /// <param name="pBits">IntPtr to the image data</param>
+        /// <param name="request">The original requets</param>
+        protected void ProcessCapture(int width, int height, int pitch, PixelFormat format, IntPtr pBits, ScreenshotRequest request)
         {
-            ProcessCapture(ReadFullStream(stream), requestId);
+            if (request == null)
+                return;
+
+            if (format == PixelFormat.Undefined)
+            {
+                DebugMessage("Unsupported render target format");
+                return;
+            }
+
+            // Copy the image data from the buffer
+            int size = height * pitch;
+            var data = new byte[size];
+            Marshal.Copy(pBits, data, 0, size);
+
+            // Prepare the response
+            Screenshot response = null;
+
+            if (request.Format == Capture.Interface.ImageFormat.PixelData)
+            {
+                // Return the raw data
+                response = new Screenshot(request.RequestId, data)
+                {
+                    Format = request.Format,
+                    PixelFormat = format,
+                    Height = height,
+                    Width = width,
+                    Stride = pitch
+                };
+            }
+            else 
+            {
+                // Return an image
+                using (var bm = data.ToBitmap(width, height, pitch, format))
+                {
+                    System.Drawing.Imaging.ImageFormat imgFormat = System.Drawing.Imaging.ImageFormat.Bmp;
+                    switch (request.Format)
+                    {
+                        case Capture.Interface.ImageFormat.Jpeg:
+                            imgFormat = System.Drawing.Imaging.ImageFormat.Jpeg;
+                            break;
+                        case Capture.Interface.ImageFormat.Png:
+                            imgFormat = System.Drawing.Imaging.ImageFormat.Png;
+                            break;
+                    }
+
+                    response = new Screenshot(request.RequestId, bm.ToByteArray(imgFormat))
+                    {
+                        Format = request.Format,
+                        Height = bm.Height,
+                        Width = bm.Width
+                    };
+                }
+            }
+
+            // Send the response
+            SendResponse(response);
         }
 
-        protected void ProcessCapture(byte[] bitmapData, Guid? requestId)
+        protected void SendResponse(Screenshot response)
+        {
+            System.Threading.Tasks.Task.Factory.StartNew(() =>
+            {
+                try
+                {
+                    Interface.SendScreenshotResponse(response);
+                    LastCaptureTime = Timer.Elapsed;
+                }
+                catch (RemotingException)
+                {
+                    // Ignore remoting exceptions
+                    // .NET Remoting will throw an exception if the host application is unreachable
+                }
+                catch (Exception e)
+                {
+                    DebugMessage(e.ToString());
+                }
+            });
+        }
+
+        protected void ProcessCapture(Stream stream, ScreenshotRequest request)
+        {
+            ProcessCapture(ReadFullStream(stream), request);
+        }
+
+        protected void ProcessCapture(byte[] bitmapData, ScreenshotRequest request)
         {
             try
             {
-                if (requestId.HasValue)
-                    Interface.SendScreenshotResponse(new Screenshot(requestId.Value, bitmapData));
-
+                if (request != null)
+                {
+                    Interface.SendScreenshotResponse(new Screenshot(request.RequestId, bitmapData));
+                }
                 LastCaptureTime = Timer.Elapsed;
             }
             catch (RemotingException)
@@ -189,9 +280,8 @@ namespace Capture.Hook
         }
 
 
-        private ImageCodecInfo GetEncoder(ImageFormat format)
+        private ImageCodecInfo GetEncoder(System.Drawing.Imaging.ImageFormat format)
         {
-
             ImageCodecInfo[] codecs = ImageCodecInfo.GetImageDecoders();
 
             foreach (ImageCodecInfo codec in codecs)
@@ -253,7 +343,7 @@ namespace Capture.Hook
             set { Interlocked.Exchange(ref _request, value);  }
         }
 
-        protected List<LocalHook> Hooks = new List<LocalHook>();
+        protected List<Hook> Hooks = new List<Hook>();
         public abstract void Hook();
 
         public abstract void Cleanup();
@@ -262,16 +352,17 @@ namespace Capture.Hook
 
         #region IDispose Implementation
 
-        public void Dispose()
-        {
-            Dispose(true);
-        }
-
-        protected virtual void Dispose(bool disposing)
+        protected override void Dispose(bool disposeManagedResources)
         {
             // Only clean up managed objects if disposing (i.e. not called from destructor)
-            if (disposing)
+            if (disposeManagedResources)
             {
+                try
+                {
+                    Cleanup();
+                }
+                catch { }
+
                 try
                 {
                     // Uninstall Hooks
@@ -281,7 +372,7 @@ namespace Capture.Hook
                         foreach (var hook in Hooks)
                         {
                             // Lets ensure that no threads will be intercepted again
-                            hook.ThreadACL.SetInclusiveACL(new int[] { 0 });
+                            hook.Deactivate();
                         }
 
                         System.Threading.Thread.Sleep(100);
@@ -307,6 +398,8 @@ namespace Capture.Hook
                 {
                 }
             }
+
+            base.Dispose(disposeManagedResources);
         }
 
         #endregion

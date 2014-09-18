@@ -3,53 +3,55 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Drawing;
-using System.IO;
 using System.Runtime.Remoting;
 using System.Security.Permissions;
-using System.Runtime.InteropServices;
 
 namespace Capture.Interface
 {
-    public class Screenshot : MarshalByRefObject, IDisposable
+    [Serializable]
+    public class ScreenshotRequest: MarshalByRefObject, IDisposable
     {
-        Guid _requestId;
-        public Guid RequestId
-        {
-            get
-            {
-                return _requestId;
-            }
-        }
-
+        public Guid RequestId { get; set; }
+        public Rectangle RegionToCapture { get; set; }
+        public Size? Resize { get; set; }
         public ImageFormat Format { get; set; }
 
-        public System.Drawing.Imaging.PixelFormat PixelFormat { get; set; }
-        public int Stride { get; set; }
-        public int Height { get; set; }
-        public int Width { get; set; }
-
-        byte[] _data;
-        public byte[] Data
+        public ScreenshotRequest(Rectangle region, Size resize)
+            : this(Guid.NewGuid(), region, resize)
         {
-            get
+        }
+
+        public ScreenshotRequest(Rectangle region)
+            : this(Guid.NewGuid(), region, null)
+        {
+        }
+
+        public ScreenshotRequest(Guid requestId, Rectangle region)
+            : this(requestId, region, null)
+        {
+        }
+
+        public ScreenshotRequest(Guid requestId, Rectangle region, Size? resize)
+        {
+            RequestId = requestId;
+            RegionToCapture = region;
+            Resize = resize;
+        }
+
+        public ScreenshotRequest Clone()
+        {
+            return new ScreenshotRequest(RequestId, RegionToCapture, Resize)
             {
-                return _data;
-            }
+                Format = Format
+            };
         }
 
-        private bool _disposed;
-
-        public Screenshot(Guid requestId, byte[] data)
-        {
-            _requestId = requestId;
-            _data = data;
-        }
-
-        ~Screenshot()
+        ~ScreenshotRequest()
         {
             Dispose(false);
         }
 
+        private bool _disposed;
         public void Dispose()
         {
             Dispose(true);

@@ -79,8 +79,8 @@ namespace Capture.Hook
         List<IntPtr> _d3d11VTblAddresses = null;
         List<IntPtr> _dxgiSwapChainVTblAddresses = null;
 
-        LocalHook DXGISwapChain_PresentHook = null;
-        LocalHook DXGISwapChain_ResizeTargetHook = null;
+        Hook<DXGISwapChain_PresentDelegate> DXGISwapChain_PresentHook = null;
+        Hook<DXGISwapChain_ResizeTargetDelegate> DXGISwapChain_ResizeTargetHook = null;
 
         protected override string HookName
         {
@@ -134,13 +134,13 @@ namespace Capture.Hook
             }
 
             // We will capture the backbuffer here
-            DXGISwapChain_PresentHook = LocalHook.Create(
+            DXGISwapChain_PresentHook = new Hook<DXGISwapChain_PresentDelegate>(
                 _dxgiSwapChainVTblAddresses[(int)DXGI.DXGISwapChainVTbl.Present],
                 new DXGISwapChain_PresentDelegate(PresentHook),
                 this);
             
             // We will capture target/window resizes here
-            DXGISwapChain_ResizeTargetHook = LocalHook.Create(
+            DXGISwapChain_ResizeTargetHook = new Hook<DXGISwapChain_ResizeTargetDelegate>(
                 _dxgiSwapChainVTblAddresses[(int)DXGI.DXGISwapChainVTbl.ResizeTarget],
                 new DXGISwapChain_ResizeTargetDelegate(ResizeTargetHook),
                 this);
@@ -150,9 +150,9 @@ namespace Capture.Hook
              * The following ensures that all threads are intercepted:
              * Note: you must do this for each hook.
              */
-            DXGISwapChain_PresentHook.ThreadACL.SetExclusiveACL(new Int32[1]);
-
-            DXGISwapChain_ResizeTargetHook.ThreadACL.SetExclusiveACL(new Int32[1]);
+            DXGISwapChain_PresentHook.Activate();
+            
+            DXGISwapChain_ResizeTargetHook.Activate();
 
             Hooks.Add(DXGISwapChain_PresentHook);
             Hooks.Add(DXGISwapChain_ResizeTargetHook);
@@ -162,24 +162,11 @@ namespace Capture.Hook
         {
             try
             {
-                if (DXGISwapChain_PresentHook != null)
-                {
-                    DXGISwapChain_PresentHook.Dispose();
-                    DXGISwapChain_PresentHook = null;
-                }
-                if (DXGISwapChain_ResizeTargetHook != null)
-                {
-                    DXGISwapChain_ResizeTargetHook.Dispose();
-                    DXGISwapChain_ResizeTargetHook = null;
-                }
-                
                 if (_overlayEngine != null)
                 {
                     _overlayEngine.Dispose();
                     _overlayEngine = null;
                 }
-
-                this.Request = null;
             }
             catch
             {
@@ -315,7 +302,7 @@ namespace Capture.Hook
                         // Note: it would be possible to capture multiple frames and process them in a background thread
 
                         // Copy to memory and send back to host process on a background thread so that we do not cause any delay in the rendering pipeline
-                        Guid requestId = this.Request.RequestId; // this.Request gets set to null, so copy the RequestId for use in the thread
+                        var requestCopy = this.Request.Clone(); // this.Request gets set to null, so copy the RequestId for use in the thread
                         ThreadPool.QueueUserWorkItem(delegate
                         {
                             //FileStream fs = new FileStream(@"c:\temp\temp.bmp", FileMode.Create);
@@ -329,7 +316,7 @@ namespace Capture.Hook
                                 this.DebugMessage("PresentHook: Copy to System Memory time: " + (DateTime.Now - startCopyToSystemMemory).ToString());
 
                                 DateTime startSendResponse = DateTime.Now;
-                                ProcessCapture(ms, requestId);
+                                ProcessCapture(ms, requestCopy);
                                 this.DebugMessage("PresentHook: Send response time: " + (DateTime.Now - startSendResponse).ToString());
                             }
 
