@@ -148,7 +148,7 @@ namespace Capture
 
             try
             {
-                if (version == Direct3DVersion.AutoDetect)
+                if (version == Direct3DVersion.AutoDetect || version == Direct3DVersion.Unknown)
                 {
                     // Attempt to determine the correct version based on loaded module.
                     // In most cases this will work fine, however it is perfectly ok for an application to use a D3D10 device along with D3D11 devices
@@ -209,6 +209,11 @@ namespace Capture
                         version = Direct3DVersion.Direct3D9;
                         loadedVersions.Add(version);
                     }
+                }
+                else
+                {
+                    // If not autodetect, assume specified version is loaded
+                    loadedVersions.Add(version);
                 }
 
                 foreach (var dxVersion in loadedVersions)
