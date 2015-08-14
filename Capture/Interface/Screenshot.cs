@@ -56,11 +56,11 @@ namespace Capture.Interface
             GC.SuppressFinalize(this);
         }
 
-        protected virtual void Dispose(bool disposing)
+        protected virtual void Dispose(bool disposeManagedResources)
         {
             if (!_disposed)
             {
-                if (disposing)
+                if (disposeManagedResources)
                 {
                     Disconnect();
                 }

@@ -18,7 +18,7 @@ using System.Runtime.Serialization.Formatters;
 
 namespace Capture
 {
-    public class CaptureProcess: IDisposable
+    public class CaptureProcess : IDisposable
     {
         /// <summary>
         /// Must be null to allow a random channel name to be generated
@@ -99,7 +99,7 @@ namespace Capture
 
         ~CaptureProcess()
         {
-            Dispose();
+            Dispose(false);
         }
 
 
@@ -156,14 +156,28 @@ namespace Capture
         #endregion
 
         #region IDispose
-        private bool _isDisposed = false;
+
+        private bool _disposed = false;
         public void Dispose()
         {
-            if (!_isDisposed)
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!_disposed)
             {
-                
+                if (disposing)
+                {
+                    // Disconnect the IPC (which causes the remote entry point to exit)
+                    _serverInterface.Disconnect();
+                }
+
+                _disposed = true;
             }
         }
+
         #endregion
     }
 }

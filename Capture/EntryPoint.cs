@@ -9,7 +9,7 @@ using System.Runtime.Remoting.Channels.Ipc;
 
 namespace Capture
 {
-    public class EntryPoint: EasyHook.IEntryPoint
+    public class EntryPoint : EasyHook.IEntryPoint
     {
         List<IDXHook> _directXHooks = new List<IDXHook>();
         IDXHook _directXHook = null;
