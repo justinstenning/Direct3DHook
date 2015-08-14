@@ -264,7 +264,10 @@ namespace Capture.Hook
             {
                 if (request != null)
                 {
-                    Interface.SendScreenshotResponse(new Screenshot(request.RequestId, bitmapData));
+                    Interface.SendScreenshotResponse(new Screenshot(request.RequestId, bitmapData)
+                    {
+                        Format = request.Format,
+                    });
                 }
                 LastCaptureTime = Timer.Elapsed;
             }

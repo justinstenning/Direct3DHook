@@ -189,7 +189,7 @@ namespace Capture.Hook.DX11
                     fontSheetY += (int)(_charHeight) + 1;
                 }
 
-                _charRects[i] = new Rectangle(fontSheetX, fontSheetY, fontSheetX + charWidth, fontSheetY + _charHeight);
+                _charRects[i] = new Rectangle(fontSheetX, fontSheetY, charWidth, _charHeight);
 
                 fontSheetGraphics.DrawImage(charBitmap, fontSheetX, fontSheetY, new System.Drawing.Rectangle(minX, 0, charWidth, _charHeight), System.Drawing.GraphicsUnit.Pixel);
 
