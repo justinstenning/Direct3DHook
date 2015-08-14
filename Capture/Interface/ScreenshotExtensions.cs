@@ -39,17 +39,17 @@ namespace Capture.Interface
 
         public static Bitmap ToBitmap(this byte[] imageBytes)
         {
-            using (MemoryStream ms = new MemoryStream(imageBytes))
+            // Note: deliberately not disposing of MemoryStream, it doesn't have any unmanaged resources anyway and the GC 
+            //       will deal with it. This fixes GitHub issue #19 (https://github.com/spazzarama/Direct3DHook/issues/19).
+            MemoryStream ms = new MemoryStream(imageBytes);
+            try
             {
-                try
-                {
-                    Bitmap image = (Bitmap)Image.FromStream(ms);
-                    return image;
-                }
-                catch
-                {
-                    return null;
-                }
+                Bitmap image = (Bitmap)Image.FromStream(ms);
+                return image;
+            }
+            catch
+            {
+                return null;
             }
         }
 
