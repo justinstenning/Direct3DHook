@@ -259,8 +259,6 @@ float4 PSMain(PixelIn input) : SV_Target
                 // Set sampler
                 ViewportF[] viewportf = { new ViewportF(0, 0, RenderTarget.Description.Width, RenderTarget.Description.Height, 0, 1) };
                 context.Rasterizer.SetViewports(viewportf);
-                //context.OutputMerger.SetTargets(RenderTargetView);
-                //context.Rasterizer.SetViewport(0, 0, 1.0f, 1.0f);
                 context.PixelShader.SetSampler(0, (UseLinearSampling ? linearSampleState : pointSamplerState));
 
                 // Set shader resource
@@ -281,7 +279,6 @@ float4 PSMain(PixelIn input) : SV_Target
                 //else
                 context.PixelShader.Set(pixelShader);
 
-
                 // Set vertex shader
                 context.VertexShader.Set(vertexShader);
 
@@ -298,6 +295,9 @@ float4 PSMain(PixelIn input) : SV_Target
 
                 // Draw the 4 vertices that make up the triangle strip
                 context.Draw(4, 0);
+
+                // Remove the render target from the pipeline so that we can read from it if necessary
+                context.OutputMerger.SetTargets((RenderTargetView)null);
 
                 // Restore previous shader and IA settings
                 //context.PixelShader.SetSampler(0, oldSampler);
