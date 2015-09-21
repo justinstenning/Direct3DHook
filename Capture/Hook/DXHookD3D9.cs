@@ -170,6 +170,8 @@ namespace Capture.Hook
                 _queryIssued = false;
 
                 RemoveAndDispose(ref _font);
+
+                RemoveAndDispose(ref _overlayEngine);
             }
         }
 
@@ -249,6 +251,8 @@ namespace Capture.Hook
 
             return Direct3DDevice_EndSceneHook.Original(devicePtr);
         }
+
+        Capture.Hook.DX9.DXOverlayEngine _overlayEngine;
 
         /// <summary>
         /// Implementation of capturing from the render target of the Direct3D9 Device (or DeviceEx)
@@ -371,19 +375,36 @@ namespace Capture.Hook
 
                 if (this.Config.ShowOverlay)
                 {
-                    #region Draw frame rate
+                    #region Draw Overlay
 
-                    if (_font == null || _font.Device.NativePointer != device.NativePointer)
-                        CreateFont(device);
-
-                    if (this.FPS.GetFPS() >= 1)
+                    // Check if overlay needs to be initialised
+                    if (_overlayEngine == null || _overlayEngine.Device.NativePointer != device.NativePointer)
                     {
-                        _font.DrawText(null, String.Format("{0:N0} fps", this.FPS.GetFPS()), 5, 5, SharpDX.Color.Red);
+                        // Cleanup if necessary
+                        if (_overlayEngine != null)
+                            _overlayEngine.Dispose();
+
+                        _overlayEngine = ToDispose(new DX9.DXOverlayEngine());
+                        // Create Overlay
+                        _overlayEngine.Overlays.Add(new Capture.Hook.Common.Overlay
+                        {
+                            Elements =
+                            {
+                                // Add frame rate
+                                new Capture.Hook.Common.FramesPerSecond(new System.Drawing.Font("Arial", 16, FontStyle.Bold)) { Location = new System.Drawing.Point(5,5), Color = System.Drawing.Color.Red, AntiAliased = true },
+                                // Example of adding an image to overlay (can implement semi transparency with Tint, e.g. Ting = Color.FromArgb(127, 255, 255, 255))
+                                new Capture.Hook.Common.ImageElement(@"C:\Temp\test.bmp") { Location = new System.Drawing.Point(20, 20) }
+                            }
+                        });
+                        
+                        _overlayEngine.Initialise(device);
                     }
-
-                    if (this.TextDisplay != null && this.TextDisplay.Display)
+                    // Draw Overlay(s)
+                    else if (_overlayEngine != null)
                     {
-                        _font.DrawText(null, this.TextDisplay.Text, 5, 25, new SharpDX.ColorBGRA(255, 0, 0, (byte)Math.Round((Math.Abs(1.0f - TextDisplay.Remaining) * 255f))));
+                        foreach (var overlay in _overlayEngine.Overlays)
+                            overlay.Frame();
+                        _overlayEngine.Draw();
                     }
 
                     #endregion
@@ -420,25 +441,6 @@ namespace Capture.Hook
             _resolvedTarget = ToDispose(Surface.CreateRenderTarget(device, width, height, format, MultisampleType.None, 0, false));
 
             _query = ToDispose(new Query(device, QueryType.Event));
-        }
-
-        private void CreateFont(Device device)
-        {
-            RemoveAndDispose(ref _font);
-
-            _font = ToDispose(new SharpDX.Direct3D9.Font(device, new FontDescription()
-            {
-                Height = 16,
-                FaceName = "Arial",
-                Italic = false,
-                Width = 0,
-                MipLevels = 1,
-                CharacterSet = FontCharacterSet.Default,
-                OutputPrecision = FontPrecision.Default,
-                Quality = FontQuality.Antialiased,
-                PitchAndFamily = FontPitchAndFamily.Default | FontPitchAndFamily.DontCare,
-                Weight = FontWeight.Bold
-            }));
         }
     }
 }

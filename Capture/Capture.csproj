@@ -104,6 +104,7 @@
     <Compile Include="Hook\DX11\DXFont.cs" />
     <Compile Include="Hook\DX11\DXSprite.cs" />
     <Compile Include="Hook\DX11\RendererBase.cs" />
+    <Compile Include="Hook\DX9\DXOverlayEngine.cs" />
     <Compile Include="Hook\SafeHGlobal.cs" />
     <Compile Include="Hook\DX11\ScreenAlignedQuadRenderer.cs" />
     <Compile Include="Hook\DX9FormatExtension.cs" />

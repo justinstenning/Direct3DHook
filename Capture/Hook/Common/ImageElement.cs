@@ -26,11 +26,14 @@ namespace Capture.Hook.Common
 
         public float Scale { get; set; }
 
+        public string Filename { get; set; }
+
         bool _ownsBitmap = false;
 
         public ImageElement(string filename):
             this(new System.Drawing.Bitmap(filename), true)
         {
+            Filename = filename;
         }
 
         public ImageElement(System.Drawing.Bitmap bitmap, bool ownsImage = false)
