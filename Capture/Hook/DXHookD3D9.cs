@@ -393,7 +393,7 @@ namespace Capture.Hook
                                 // Add frame rate
                                 new Capture.Hook.Common.FramesPerSecond(new System.Drawing.Font("Arial", 16, FontStyle.Bold)) { Location = new System.Drawing.Point(5,5), Color = System.Drawing.Color.Red, AntiAliased = true },
                                 // Example of adding an image to overlay (can implement semi transparency with Tint, e.g. Ting = Color.FromArgb(127, 255, 255, 255))
-                                new Capture.Hook.Common.ImageElement(@"C:\Temp\test.bmp") { Location = new System.Drawing.Point(20, 20) }
+                                //new Capture.Hook.Common.ImageElement(@"C:\Temp\test.bmp") { Location = new System.Drawing.Point(20, 20) }
                             }
                         });
                         
