@@ -207,6 +207,10 @@ namespace Capture.Hook
         /// <returns></returns>
         int ResetHook(IntPtr devicePtr, ref PresentParameters presentParameters)
         {
+            // Ensure certain overlay resources have performed necessary pre-reset tasks
+            if (_overlayEngine != null)
+                _overlayEngine.BeforeDeviceReset();
+
             Cleanup();
 
             return Direct3DDevice_ResetHook.Original(devicePtr, ref presentParameters);
@@ -382,7 +386,7 @@ namespace Capture.Hook
                     {
                         // Cleanup if necessary
                         if (_overlayEngine != null)
-                            _overlayEngine.Dispose();
+                            RemoveAndDispose(ref _overlayEngine);
 
                         _overlayEngine = ToDispose(new DX9.DXOverlayEngine());
                         // Create Overlay
@@ -396,7 +400,7 @@ namespace Capture.Hook
                                 //new Capture.Hook.Common.ImageElement(@"C:\Temp\test.bmp") { Location = new System.Drawing.Point(20, 20) }
                             }
                         });
-                        
+
                         _overlayEngine.Initialise(device);
                     }
                     // Draw Overlay(s)

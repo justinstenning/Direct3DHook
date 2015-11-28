@@ -47,7 +47,7 @@ namespace Capture.Hook.DX9
 
                 _device = device;
 
-                _sprite = new Sprite(_device);
+                _sprite = ToDispose(new Sprite(_device));
 
                 // Initialise any resources required for overlay elements
                 IntialiseElementResources();
@@ -127,6 +127,22 @@ namespace Capture.Hook.DX9
         private void End()
         {
             _sprite.End();
+        }
+
+        /// <summary>
+        /// In Direct3D9 it is necessary to call OnLostDevice before any call to device.Reset(...) for certain interfaces found in D3DX (e.g. ID3DXSprite, ID3DXFont, ID3DXLine) - https://msdn.microsoft.com/en-us/library/windows/desktop/bb172979(v=vs.85).aspx
+        /// </summary>
+        public void BeforeDeviceReset()
+        {
+            try
+            {
+                foreach (var item in _fontCache)
+                    item.Value.OnLostDevice();
+                
+                if (_sprite != null)
+                    _sprite.OnLostDevice();
+            }
+            catch { }
         }
 
         Font GetFontForTextElement(TextElement element)
