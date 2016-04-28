@@ -1,15 +1,12 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 
 namespace Capture.Interface
 {
     [Serializable]   
     public class MessageReceivedEventArgs: MarshalByRefObject
     {
-        public MessageType MessageType { get; set; }
-        public string Message { get; set; }
+        public MessageType MessageType { get; }
+        public string Message { get; }
 
         public MessageReceivedEventArgs(MessageType messageType, string message)
         {
@@ -17,9 +14,6 @@ namespace Capture.Interface
             Message = message;
         }
 
-        public override string ToString()
-        {
-            return String.Format("{0}: {1}", MessageType, Message);
-        }
+        public override string ToString() => $"{MessageType}: {Message}";
     }
 }

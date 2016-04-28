@@ -1,12 +1,19 @@
 ﻿// Adapted from Frank Luna's "Sprites and Text" example here: http://www.d3dcoder.net/resources.htm 
 // checkout his books here: http://www.d3dcoder.net/default.htm
+
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using SharpDX.Direct3D11;
-using SharpDX;
 using System.Diagnostics;
+using System.Drawing;
+using System.Drawing.Drawing2D;
+using System.Drawing.Imaging;
+using System.Drawing.Text;
+using SharpDX;
+using SharpDX.Direct3D;
+using SharpDX.Direct3D11;
+using SharpDX.DXGI;
+using Color = System.Drawing.Color;
+using Device = SharpDX.Direct3D11.Device;
+using Rectangle = SharpDX.Rectangle;
 
 namespace Capture.Hook.DX11
 {
@@ -30,10 +37,8 @@ namespace Capture.Hook.DX11
 
         public void Dispose()
         {
-            if (_fontSheetTex != null)
-                _fontSheetTex.Dispose();
-            if (_fontSheetSRV != null)
-                _fontSheetSRV.Dispose();
+            _fontSheetTex?.Dispose();
+            _fontSheetSRV?.Dispose();
 
             _fontSheetTex = null;
             _fontSheetSRV = null;
@@ -49,7 +54,7 @@ namespace Capture.Hook.DX11
             STYLE_BOLD_ITALIC = 3,
             STYLE_UNDERLINE = 4,
             STYLE_STRIKEOUT = 8
-        };
+        }
 
         bool _initialized;
         const char StartChar = (char)33;
@@ -57,33 +62,34 @@ namespace Capture.Hook.DX11
         const uint NumChars = EndChar - StartChar;
         ShaderResourceView _fontSheetSRV;
         Texture2D _fontSheetTex;
-        int _texWidth, _texHeight;
-        Rectangle[] _charRects = new Rectangle[NumChars];
+        readonly int _texWidth;
+        int _texHeight;
+        readonly Rectangle[] _charRects = new Rectangle[NumChars];
         int _spaceWidth, _charHeight;
 
-        public bool Initialize(string FontName, float FontSize, System.Drawing.FontStyle FontStyle, bool AntiAliased)
+        public bool Initialize(string FontName, float FontSize, FontStyle FontStyle, bool AntiAliased)
         {
             Debug.Assert(!_initialized);
-            System.Drawing.Font font = new System.Drawing.Font(FontName, FontSize, FontStyle, System.Drawing.GraphicsUnit.Pixel);
+            var font = new Font(FontName, FontSize, FontStyle, GraphicsUnit.Pixel);
 
-            System.Drawing.Text.TextRenderingHint hint = AntiAliased ? System.Drawing.Text.TextRenderingHint.AntiAlias : System.Drawing.Text.TextRenderingHint.SystemDefault;
+            var hint = AntiAliased ? TextRenderingHint.AntiAlias : TextRenderingHint.SystemDefault;
 
-            int tempSize = (int)(FontSize * 2);
-            using (System.Drawing.Bitmap charBitmap = new System.Drawing.Bitmap(tempSize, tempSize, System.Drawing.Imaging.PixelFormat.Format32bppArgb))
+            var tempSize = (int)(FontSize * 2);
+            using (var charBitmap = new Bitmap(tempSize, tempSize, PixelFormat.Format32bppArgb))
             {
-                using (System.Drawing.Graphics charGraphics = System.Drawing.Graphics.FromImage(charBitmap))
+                using (var charGraphics = Graphics.FromImage(charBitmap))
                 {
-                    charGraphics.PageUnit = System.Drawing.GraphicsUnit.Pixel;
+                    charGraphics.PageUnit = GraphicsUnit.Pixel;
                     charGraphics.TextRenderingHint = hint;
 
                     MeasureChars(font, charGraphics);
 
-                    using (var fontSheetBitmap = new System.Drawing.Bitmap(_texWidth, _texHeight, System.Drawing.Imaging.PixelFormat.Format32bppArgb))
+                    using (var fontSheetBitmap = new Bitmap(_texWidth, _texHeight, PixelFormat.Format32bppArgb))
                     {
-                        using (var fontSheetGraphics = System.Drawing.Graphics.FromImage(fontSheetBitmap))
+                        using (var fontSheetGraphics = Graphics.FromImage(fontSheetBitmap))
                         {
-                            fontSheetGraphics.CompositingMode = System.Drawing.Drawing2D.CompositingMode.SourceCopy;
-                            fontSheetGraphics.Clear(System.Drawing.Color.FromArgb(0, System.Drawing.Color.Black));
+                            fontSheetGraphics.CompositingMode = CompositingMode.SourceCopy;
+                            fontSheetGraphics.Clear(Color.FromArgb(0, Color.Black));
 
                             BuildFontSheetBitmap(font, charGraphics, charBitmap, fontSheetGraphics);
 
@@ -103,26 +109,30 @@ namespace Capture.Hook.DX11
             return true;
         }
 
-        private bool BuildFontSheetTexture(System.Drawing.Bitmap fontSheetBitmap)
+        bool BuildFontSheetTexture(Bitmap fontSheetBitmap)
         {
-            System.Drawing.Imaging.BitmapData bmData;
+            var bmData = fontSheetBitmap.LockBits(new System.Drawing.Rectangle(0, 0, _texWidth, _texHeight), ImageLockMode.ReadOnly, PixelFormat.Format32bppArgb);
 
-            bmData = fontSheetBitmap.LockBits(new System.Drawing.Rectangle(0, 0, _texWidth, _texHeight), System.Drawing.Imaging.ImageLockMode.ReadOnly, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
-            Texture2DDescription texDesc = new Texture2DDescription();
-            texDesc.Width = _texWidth;
-            texDesc.Height = _texHeight;
-            texDesc.MipLevels = 1;
-            texDesc.ArraySize = 1;
-            texDesc.Format = SharpDX.DXGI.Format.B8G8R8A8_UNorm;
-            texDesc.SampleDescription.Count = 1;
-            texDesc.SampleDescription.Quality = 0;
-            texDesc.Usage = ResourceUsage.Immutable;
-            texDesc.BindFlags = BindFlags.ShaderResource;
-            texDesc.CpuAccessFlags = CpuAccessFlags.None;
-            texDesc.OptionFlags = ResourceOptionFlags.None;
+            var texDesc = new Texture2DDescription
+            {
+                Width = _texWidth,
+                Height = _texHeight,
+                MipLevels = 1,
+                ArraySize = 1,
+                Format = Format.B8G8R8A8_UNorm,
+                SampleDescription =
+                {
+                    Count = 1,
+                    Quality = 0
+                },
+                Usage = ResourceUsage.Immutable,
+                BindFlags = BindFlags.ShaderResource,
+                CpuAccessFlags = CpuAccessFlags.None,
+                OptionFlags = ResourceOptionFlags.None
+            };
 
 
-            SharpDX.DataBox data;
+            DataBox data;
             data.DataPointer = bmData.Scan0;
             data.RowPitch = _texWidth * 4;
             data.SlicePitch = 0;
@@ -131,11 +141,16 @@ namespace Capture.Hook.DX11
             if (_fontSheetTex == null)
                 return false;
 
-            ShaderResourceViewDescription srvDesc = new ShaderResourceViewDescription();
-            srvDesc.Format = SharpDX.DXGI.Format.B8G8R8A8_UNorm;
-            srvDesc.Dimension = SharpDX.Direct3D.ShaderResourceViewDimension.Texture2D;
-            srvDesc.Texture2D.MipLevels = 1;
-            srvDesc.Texture2D.MostDetailedMip = 0;
+            var srvDesc = new ShaderResourceViewDescription
+            {
+                Format = Format.B8G8R8A8_UNorm,
+                Dimension = ShaderResourceViewDimension.Texture2D,
+                Texture2D =
+                {
+                    MipLevels = 1,
+                    MostDetailedMip = 0
+                }
+            };
 
             _fontSheetSRV = new ShaderResourceView(_device, _fontSheetTex, srvDesc);
             if (_fontSheetSRV == null)
@@ -146,69 +161,66 @@ namespace Capture.Hook.DX11
             return true;
         }
 
-        void MeasureChars(System.Drawing.Font font, System.Drawing.Graphics charGraphics)
+        void MeasureChars(Font font, Graphics charGraphics)
         {
-            char[] allChars = new char[NumChars];
+            var allChars = new char[NumChars];
 
-            for (char i = (char)0; i < NumChars; ++i)
+            for (var i = (char)0; i < NumChars; ++i)
                 allChars[i] = (char)(StartChar + i);
 
-            System.Drawing.SizeF size;
-            size = charGraphics.MeasureString(new String(allChars), font, new System.Drawing.PointF(0, 0), System.Drawing.StringFormat.GenericDefault);
+            var size = charGraphics.MeasureString(new string(allChars), font, new PointF(0, 0), StringFormat.GenericDefault);
 
             _charHeight = (int)(size.Height + 0.5f);
 
-            int numRows = (int)(size.Width / _texWidth) + 1;
-            _texHeight = (numRows * _charHeight) + 1;
+            var numRows = (int)(size.Width / _texWidth) + 1;
+            _texHeight = numRows * _charHeight + 1;
 
-            System.Drawing.StringFormat sf = System.Drawing.StringFormat.GenericDefault;
-            sf.FormatFlags |= System.Drawing.StringFormatFlags.MeasureTrailingSpaces;
+            var sf = StringFormat.GenericDefault;
+            sf.FormatFlags |= StringFormatFlags.MeasureTrailingSpaces;
             size = charGraphics.MeasureString(" ", font, 0, sf);
             _spaceWidth = (int)(size.Width + 0.5f);
         }
 
-        void BuildFontSheetBitmap(System.Drawing.Font font, System.Drawing.Graphics charGraphics, System.Drawing.Bitmap charBitmap, System.Drawing.Graphics fontSheetGraphics)
+        void BuildFontSheetBitmap(Font font, Graphics charGraphics, Bitmap charBitmap, Graphics fontSheetGraphics)
         {
-            System.Drawing.Brush whiteBrush = System.Drawing.Brushes.White;
-            int fontSheetX = 0;
-            int fontSheetY = 0;
+            var whiteBrush = Brushes.White;
+            var fontSheetX = 0;
+            var fontSheetY = 0;
 
 
-            for (int i = 0; i < NumChars; ++i)
+            for (var i = 0; i < NumChars; ++i)
             {
-                charGraphics.Clear(System.Drawing.Color.FromArgb(0, System.Drawing.Color.Black));
-                charGraphics.DrawString(((char)(StartChar + i)).ToString(), font, whiteBrush, new System.Drawing.PointF(0.0f, 0.0f));
+                charGraphics.Clear(Color.FromArgb(0, Color.Black));
+                charGraphics.DrawString(((char)(StartChar + i)).ToString(), font, whiteBrush, new PointF(0.0f, 0.0f));
 
-                int minX = GetCharMinX(charBitmap);
-                int maxX = GetCharMaxX(charBitmap);
-                int charWidth = maxX - minX + 1;
+                var minX = GetCharMinX(charBitmap);
+                var maxX = GetCharMaxX(charBitmap);
+                var charWidth = maxX - minX + 1;
 
                 if (fontSheetX + charWidth >= _texWidth)
                 {
                     fontSheetX = 0;
-                    fontSheetY += (int)(_charHeight) + 1;
+                    fontSheetY += _charHeight + 1;
                 }
 
                 _charRects[i] = new Rectangle(fontSheetX, fontSheetY, charWidth, _charHeight);
 
-                fontSheetGraphics.DrawImage(charBitmap, fontSheetX, fontSheetY, new System.Drawing.Rectangle(minX, 0, charWidth, _charHeight), System.Drawing.GraphicsUnit.Pixel);
+                fontSheetGraphics.DrawImage(charBitmap, fontSheetX, fontSheetY, new System.Drawing.Rectangle(minX, 0, charWidth, _charHeight), GraphicsUnit.Pixel);
 
                 fontSheetX += charWidth + 1;
             }
         }
 
-        private int GetCharMaxX(System.Drawing.Bitmap charBitmap)
+        static int GetCharMaxX(Bitmap charBitmap)
         {
-            int width = charBitmap.Width;
-            int height = charBitmap.Height;
+            var width = charBitmap.Width;
+            var height = charBitmap.Height;
 
-            for (int x = width - 1; x >= 0; --x)
+            for (var x = width - 1; x >= 0; --x)
             {
-                for (int y = 0; y < height; ++y)
+                for (var y = 0; y < height; ++y)
                 {
-                    System.Drawing.Color color;
-
-                    color = charBitmap.GetPixel(x, y);
+                    var color = charBitmap.GetPixel(x, y);
                     if (color.A > 0)
                         return x;
                 }
@@ -217,18 +229,16 @@ namespace Capture.Hook.DX11
             return width - 1;
         }
 
-        private int GetCharMinX(System.Drawing.Bitmap charBitmap)
+        static int GetCharMinX(Bitmap charBitmap)
         {
-            int width = charBitmap.Width;
-            int height = charBitmap.Height;
+            var width = charBitmap.Width;
+            var height = charBitmap.Height;
 
-            for (int x = 0; x < width; ++x)
+            for (var x = 0; x < width; ++x)
             {
-                for (int y = 0; y < height; ++y)
+                for (var y = 0; y < height; ++y)
                 {
-                    System.Drawing.Color color;
-
-                    color = charBitmap.GetPixel(x, y);
+                    var color = charBitmap.GetPixel(x, y);
                     if (color.A > 0)
                         return x;
                 }

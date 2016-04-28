@@ -1,21 +1,20 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Text;
+using System.IO;
 using System.Runtime.InteropServices;
-using EasyHook;
+using System.Threading;
+using System.Windows.Forms;
+using Capture.Interface;
+using SharpDX;
+using SharpDX.Direct3D10;
+using SharpDX.DXGI;
+using Device = SharpDX.Direct3D10.Device;
+using Rectangle = System.Drawing.Rectangle;
+using Resource = SharpDX.Direct3D10.Resource;
 //using SlimDX.DXGI;
 //using SlimDX.Direct3D10;
 //using SlimDX;
-using System.IO;
-using System.Threading;
 //using Device = SlimDX.Direct3D10.Device;
-using Capture.Interface;
-using SharpDX.Direct3D10;
-using Device = SharpDX.Direct3D10.Device;
-using SharpDX.DXGI;
-using SharpDX;
 
 namespace Capture.Hook
 {
@@ -121,56 +120,50 @@ namespace Capture.Hook
         GetCreationFlags = 94,
         OpenSharedResource = 95,
         SetTextFilterSize = 96,
-        GetTextFilterSize = 97,
+        GetTextFilterSize = 97
     }
 
     /// <summary>
     /// Direct3D 10 Hook - this hooks the SwapChain.Present method to capture images
     /// </summary>
-    internal class DXHookD3D10: BaseDXHook
+    class DXHookD3D10: BaseDXHook
     {
         const int D3D10_DEVICE_METHOD_COUNT = 98;
 
         public DXHookD3D10(CaptureInterface ssInterface)
             : base(ssInterface)
         {
-            this.DebugMessage("Create");
+            DebugMessage("Create");
         }
 
-        List<IntPtr> _d3d10VTblAddresses = null;
-        List<IntPtr> _dxgiSwapChainVTblAddresses = null;
+        List<IntPtr> _d3d10VTblAddresses;
+        List<IntPtr> _dxgiSwapChainVTblAddresses;
 
-        Hook<DXGISwapChain_PresentDelegate> DXGISwapChain_PresentHook = null;
-        Hook<DXGISwapChain_ResizeTargetDelegate> DXGISwapChain_ResizeTargetHook = null;
+        Hook<DXGISwapChain_PresentDelegate> DXGISwapChain_PresentHook;
+        Hook<DXGISwapChain_ResizeTargetDelegate> DXGISwapChain_ResizeTargetHook;
 
-        protected override string HookName
-        {
-            get
-            {
-                return "DXHookD3D10";
-            }
-        }
+        protected override string HookName => "DXHookD3D10";
 
         public override void Hook()
         {
-            this.DebugMessage("Hook: Begin");
+            DebugMessage("Hook: Begin");
 
             // Determine method addresses in Direct3D10.Device, and DXGI.SwapChain
             if (_d3d10VTblAddresses == null)
             {
                 _d3d10VTblAddresses = new List<IntPtr>();
                 _dxgiSwapChainVTblAddresses = new List<IntPtr>();
-                this.DebugMessage("Hook: Before device creation");
+                DebugMessage("Hook: Before device creation");
                 using (var factory = new Factory())
                 {
                     using (var device = new Device(factory.GetAdapter(0), DeviceCreationFlags.None))
                     {
-                        this.DebugMessage("Hook: Device created");
+                        DebugMessage("Hook: Device created");
                         _d3d10VTblAddresses.AddRange(GetVTblAddresses(device.NativePointer, D3D10_DEVICE_METHOD_COUNT));
 
-                        using (var renderForm = new System.Windows.Forms.Form())
+                        using (var renderForm = new Form())
                         {
-                            using (SharpDX.DXGI.SwapChain sc = new SharpDX.DXGI.SwapChain(factory, device, DXGI.CreateSwapChainDescription(renderForm.Handle)))
+                            using (var sc = new SwapChain(factory, device, DXGI.CreateSwapChainDescription(renderForm.Handle)))
                             {
                                 _dxgiSwapChainVTblAddresses.AddRange(GetVTblAddresses(sc.NativePointer, DXGI.DXGI_SWAPCHAIN_METHOD_COUNT));
                             }
@@ -237,15 +230,15 @@ namespace Capture.Hook
         /// <param name="swapChainPtr"></param>
         /// <param name="newTargetParameters"></param>
         /// <returns></returns>
-        int ResizeTargetHook(IntPtr swapChainPtr, ref ModeDescription newTargetParameters)
+        static int ResizeTargetHook(IntPtr swapChainPtr, ref ModeDescription newTargetParameters)
         {
-            SwapChain swapChain = (SwapChain)swapChainPtr;
+            var swapChain = (SwapChain)swapChainPtr;
 
             // This version creates a new texture for each request so there is nothing to resize.
             // IF the size of the texture is known each time, we could create it once, and then possibly need to resize it here
 
             swapChain.ResizeTarget(ref newTargetParameters);
-            return SharpDX.Result.Ok.Code;
+            return Result.Ok.Code;
         }
 
         /// <summary>
@@ -257,27 +250,27 @@ namespace Capture.Hook
         /// <returns>The HRESULT of the original method</returns>
         int PresentHook(IntPtr swapChainPtr, int syncInterval, PresentFlags flags)
         {
-            this.Frame();
-            SwapChain swapChain = (SharpDX.DXGI.SwapChain)swapChainPtr;
+            Frame();
+            var swapChain = (SwapChain)swapChainPtr;
 
 
             try
             {
                 #region Screenshot Request
-                if (this.Request != null)
+                if (Request != null)
                 {
                     try
                     {
-                        this.DebugMessage("PresentHook: Request Start");
-                        DateTime startTime = DateTime.Now;
-                        using (Texture2D texture = Texture2D.FromSwapChain<SharpDX.Direct3D10.Texture2D>(swapChain, 0))
+                        DebugMessage("PresentHook: Request Start");
+                        var startTime = DateTime.Now;
+                        using (var texture = Resource.FromSwapChain<Texture2D>(swapChain, 0))
                         {
                             #region Determine region to capture
-                            System.Drawing.Rectangle regionToCapture = new System.Drawing.Rectangle(0, 0, texture.Description.Width, texture.Description.Height);
+                            var regionToCapture = new Rectangle(0, 0, texture.Description.Width, texture.Description.Height);
 
-                            if (this.Request.RegionToCapture.Width > 0)
+                            if (Request.RegionToCapture.Width > 0)
                             {
-                                regionToCapture = this.Request.RegionToCapture;
+                                regionToCapture = Request.RegionToCapture;
                             }
                             #endregion
 
@@ -287,9 +280,9 @@ namespace Capture.Hook
                             Texture2D textureResolved = null;
                             if (texture.Description.SampleDescription.Count > 1)
                             {
-                                this.DebugMessage("PresentHook: resolving multi-sampled texture");
+                                DebugMessage("PresentHook: resolving multi-sampled texture");
                                 // texture is multi-sampled, lets resolve it down to single sample
-                                textureResolved = new Texture2D(texture.Device, new Texture2DDescription()
+                                textureResolved = new Texture2D(texture.Device, new Texture2DDescription
                                 {
                                     CpuAccessFlags = CpuAccessFlags.None,
                                     Format = texture.Description.Format,
@@ -297,7 +290,7 @@ namespace Capture.Hook
                                     Usage = ResourceUsage.Default,
                                     Width = texture.Description.Width,
                                     ArraySize = 1,
-                                    SampleDescription = new SharpDX.DXGI.SampleDescription(1, 0), // Ensure single sample
+                                    SampleDescription = new SampleDescription(1, 0), // Ensure single sample
                                     BindFlags = BindFlags.None,
                                     MipLevels = 1,
                                     OptionFlags = texture.Description.OptionFlags
@@ -310,22 +303,22 @@ namespace Capture.Hook
                             }
 
                             // Create destination texture
-                            Texture2D textureDest = new Texture2D(texture.Device, new Texture2DDescription()
-                                {
+                            var textureDest = new Texture2D(texture.Device, new Texture2DDescription
+                            {
                                     CpuAccessFlags = CpuAccessFlags.None,// CpuAccessFlags.Write | CpuAccessFlags.Read,
-                                    Format = SharpDX.DXGI.Format.R8G8B8A8_UNorm, // Supports BMP/PNG
+                                    Format = Format.R8G8B8A8_UNorm, // Supports BMP/PNG
                                     Height = regionToCapture.Height,
                                     Usage = ResourceUsage.Default,// ResourceUsage.Staging,
                                     Width = regionToCapture.Width,
                                     ArraySize = 1,//texture.Description.ArraySize,
-                                    SampleDescription = new SharpDX.DXGI.SampleDescription(1, 0),// texture.Description.SampleDescription,
+                                    SampleDescription = new SampleDescription(1, 0),// texture.Description.SampleDescription,
                                     BindFlags = BindFlags.None,
                                     MipLevels = 1,//texture.Description.MipLevels,
                                     OptionFlags = texture.Description.OptionFlags
                                 });
 
                             // Copy the subresource region, we are dealing with a flat 2D texture with no MipMapping, so 0 is the subresource index
-                            theTexture.Device.CopySubresourceRegion(theTexture, 0, new ResourceRegion()
+                            theTexture.Device.CopySubresourceRegion(theTexture, 0, new ResourceRegion
                             {
                                 Top = regionToCapture.Top,
                                 Bottom = regionToCapture.Bottom,
@@ -338,79 +331,75 @@ namespace Capture.Hook
                             // Note: it would be possible to capture multiple frames and process them in a background thread
 
                             // Copy to memory and send back to host process on a background thread so that we do not cause any delay in the rendering pipeline
-                            var request = this.Request.Clone(); // this.Request gets set to null, so copy the Request for use in the thread
+                            var request = Request.Clone(); // this.Request gets set to null, so copy the Request for use in the thread
                             ThreadPool.QueueUserWorkItem(delegate
                             {
                                 //FileStream fs = new FileStream(@"c:\temp\temp.bmp", FileMode.Create);
                                 //Texture2D.ToStream(testSubResourceCopy, ImageFileFormat.Bmp, fs);
 
-                                DateTime startCopyToSystemMemory = DateTime.Now;
-                                using (MemoryStream ms = new MemoryStream())
+                                var startCopyToSystemMemory = DateTime.Now;
+                                using (var ms = new MemoryStream())
                                 {
-                                    Texture2D.ToStream(textureDest, ImageFileFormat.Bmp, ms);
+                                    Resource.ToStream(textureDest, ImageFileFormat.Bmp, ms);
                                     ms.Position = 0;
-                                    this.DebugMessage("PresentHook: Copy to System Memory time: " + (DateTime.Now - startCopyToSystemMemory).ToString());
+                                    DebugMessage("PresentHook: Copy to System Memory time: " + (DateTime.Now - startCopyToSystemMemory));
 
-                                    DateTime startSendResponse = DateTime.Now;
+                                    var startSendResponse = DateTime.Now;
                                     ProcessCapture(ms, request);
-                                    this.DebugMessage("PresentHook: Send response time: " + (DateTime.Now - startSendResponse).ToString());
+                                    DebugMessage("PresentHook: Send response time: " + (DateTime.Now - startSendResponse));
                                 }
 
                                 // Free the textureDest as we no longer need it.
                                 textureDest.Dispose();
                                 textureDest = null;
-                                this.DebugMessage("PresentHook: Full Capture time: " + (DateTime.Now - startTime).ToString());
+                                DebugMessage("PresentHook: Full Capture time: " + (DateTime.Now - startTime));
                             });
                             
                             // Make sure we free up the resolved texture if it was created
-                            if (textureResolved != null)
-                            {
-                                textureResolved.Dispose();
-                                textureResolved = null;
-                            }
+                            textureResolved?.Dispose();
                         }
 
-                        this.DebugMessage("PresentHook: Copy BackBuffer time: " + (DateTime.Now - startTime).ToString());
-                        this.DebugMessage("PresentHook: Request End");
+                        DebugMessage("PresentHook: Copy BackBuffer time: " + (DateTime.Now - startTime));
+                        DebugMessage("PresentHook: Request End");
                     }
                     finally
                     {
                         // Prevent the request from being processed a second time
-                        this.Request = null;
+                        Request = null;
                     }
 
                 }
                 #endregion
 
                 #region Example: Draw overlay (after screenshot so we don't capture overlay as well)
-                if (this.Config.ShowOverlay)
+                if (Config.ShowOverlay)
                 {
-                    using (Texture2D texture = Texture2D.FromSwapChain<SharpDX.Direct3D10.Texture2D>(swapChain, 0))
+                    using (var texture = Resource.FromSwapChain<Texture2D>(swapChain, 0))
                     {
                         if (FPS.GetFPS() >= 1)
                         {
-                            FontDescription fd = new SharpDX.Direct3D10.FontDescription()
+                            var fd = new FontDescription
                             {
                                 Height = 16,
                                 FaceName = "Arial",
                                 Italic = false,
                                 Width = 0,
                                 MipLevels = 1,
-                                CharacterSet = SharpDX.Direct3D10.FontCharacterSet.Default,
-                                OutputPrecision = SharpDX.Direct3D10.FontPrecision.Default,
-                                Quality = SharpDX.Direct3D10.FontQuality.Antialiased,
+                                CharacterSet = FontCharacterSet.Default,
+                                OutputPrecision = FontPrecision.Default,
+                                Quality = FontQuality.Antialiased,
                                 PitchAndFamily = FontPitchAndFamily.Default | FontPitchAndFamily.DontCare,
                                 Weight = FontWeight.Bold
                             };
 
                             // TODO: Font should not be created every frame!
-                            using (Font font = new Font(texture.Device, fd))
+                            using (var font = new Font(texture.Device, fd))
                             {
-                                DrawText(font, new Vector2(5, 5), String.Format("{0:N0} fps", FPS.GetFPS()), new Color4(SharpDX.Color.Red.ToColor3()));
+                                DrawText(font, new Vector2(5, 5), $"{FPS.GetFPS():N0} fps", new Color4(Color.Red.ToColor3()));
 
-                                if (this.TextDisplay != null && this.TextDisplay.Display)
+                                if (TextDisplay != null && TextDisplay.Display)
                                 {
-                                    DrawText(font, new Vector2(5, 25), this.TextDisplay.Text, new Color4(Color.Red.ToColor3(), (Math.Abs(1.0f - TextDisplay.Remaining))));
+                                    DrawText(font, new Vector2(5, 25), TextDisplay.Text, new Color4(Color.Red.ToColor3(), Math.Abs(1.0f - TextDisplay.Remaining)));
                                 }
                             }
                         }
@@ -422,18 +411,18 @@ namespace Capture.Hook
             catch (Exception e)
             {
                 // If there is an error we do not want to crash the hooked application, so swallow the exception
-                this.DebugMessage("PresentHook: Exeception: " + e.GetType().FullName + ": " + e.Message);
+                DebugMessage("PresentHook: Exeception: " + e.GetType().FullName + ": " + e.Message);
             }
 
             // As always we need to call the original method, note that EasyHook has already repatched the original method
             // so calling it here will not cause an endless recursion to this function
             swapChain.Present(syncInterval, flags);
-            return SharpDX.Result.Ok.Code;
+            return Result.Ok.Code;
         }
 
-        private void DrawText(Font font, Vector2 pos, string text, Color4 color)
+        static void DrawText(Font font, Vector2 pos, string text, Color4 color)
         {
-            font.DrawText(null, text, new SharpDX.Rectangle((int)pos.X, (int)pos.Y, 0, 0), SharpDX.Direct3D10.FontDrawFlags.NoClip, color);
+            font.DrawText(null, text, new SharpDX.Rectangle((int)pos.X, (int)pos.Y, 0, 0), FontDrawFlags.NoClip, color);
         }
     }
 }

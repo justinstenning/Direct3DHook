@@ -1,19 +1,12 @@
-﻿namespace Capture.Hook.DX11
+﻿using SharpDX;
+using SharpDX.D3DCompiler;
+using SharpDX.Direct3D;
+using SharpDX.Direct3D11;
+
+namespace Capture.Hook.DX11
 {
-    using System;
-    using System.Collections.Generic;
-    using System.Linq;
-    using System.Text;
-    using System.Threading.Tasks;
-
-    using SharpDX;
-    using SharpDX.DXGI;
-    using SharpDX.Direct3D11;
-    using SharpDX.D3DCompiler;
-
     // Resolve class name conflicts by explicitly stating
     // which class they refer to:
-    using Buffer = SharpDX.Direct3D11.Buffer;
 
     public class ScreenAlignedQuadRenderer : RendererBase
     {
@@ -56,8 +49,7 @@ float4 PSMain(PixelIn input) : SV_Target
 ";
 
 
-
-        string shaderCode = @"Texture2D<float4> Texture0 : register(t0);
+        readonly string shaderCode = @"Texture2D<float4> Texture0 : register(t0);
 SamplerState Sampler : register(s0);
 
 struct PixelIn
@@ -111,10 +103,6 @@ float4 PSMain(PixelIn input) : SV_Target
         public RenderTargetView RenderTargetView { get; set; }
         public Texture2D RenderTarget { get; set; }
 
-        public ScreenAlignedQuadRenderer()
-        {
-        }
-
         /// <summary>
         /// Create any device dependent resources here.
         /// This method will be called when the device is first
@@ -134,7 +122,7 @@ float4 PSMain(PixelIn input) : SV_Target
             var device = DeviceManager.Direct3DDevice;
             var context = DeviceManager.Direct3DContext;
 
-            ShaderFlags shaderFlags = ShaderFlags.None;
+            var shaderFlags = ShaderFlags.None;
 #if DEBUG
             shaderFlags = ShaderFlags.Debug | ShaderFlags.SkipOptimization;
 #endif
@@ -202,10 +190,10 @@ float4 PSMain(PixelIn input) : SV_Target
                 MaximumLod = float.MaxValue
             }));
 
-            context.Rasterizer.State = ToDispose(new RasterizerState(device, new RasterizerStateDescription()
+            context.Rasterizer.State = ToDispose(new RasterizerState(device, new RasterizerStateDescription
             {
                 CullMode = CullMode.None,
-                FillMode = FillMode.Solid,                
+                FillMode = FillMode.Solid                
             }));
 
             //// Configure the depth buffer to discard pixels that are
@@ -240,7 +228,7 @@ float4 PSMain(PixelIn input) : SV_Target
 
         protected override void DoRender()
         {
-            var context = this.DeviceManager.Direct3DContext;
+            var context = DeviceManager.Direct3DContext;
 
             //context.InputAssembler.InputLayout = vertexLayout;
             //context.InputAssembler.PrimitiveTopology = SharpDX.Direct3D.PrimitiveTopology.TriangleStrip;
@@ -259,7 +247,7 @@ float4 PSMain(PixelIn input) : SV_Target
                 // Set sampler
                 ViewportF[] viewportf = { new ViewportF(0, 0, RenderTarget.Description.Width, RenderTarget.Description.Height, 0, 1) };
                 context.Rasterizer.SetViewports(viewportf);
-                context.PixelShader.SetSampler(0, (UseLinearSampling ? linearSampleState : pointSamplerState));
+                context.PixelShader.SetSampler(0, UseLinearSampling ? linearSampleState : pointSamplerState);
 
                 // Set shader resource
                 //bool isMultisampledSRV = false;
@@ -286,7 +274,7 @@ float4 PSMain(PixelIn input) : SV_Target
                 context.InputAssembler.InputLayout = null;
 
                 // Tell the IA we are using a triangle strip
-                context.InputAssembler.PrimitiveTopology = SharpDX.Direct3D.PrimitiveTopology.TriangleStrip;
+                context.InputAssembler.PrimitiveTopology = PrimitiveTopology.TriangleStrip;
                 // No vertices to pass (note: null as we will use SV_VertexId)
                 //context.InputAssembler.SetVertexBuffers(0, vertexBuffer);
 

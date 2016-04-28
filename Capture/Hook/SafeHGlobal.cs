@@ -1,8 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Runtime.InteropServices;
-using System.Text;
 
 namespace Capture.Hook
 {
@@ -15,10 +12,7 @@ namespace Capture.Hook
         /// When overridden in a derived class, gets a value indicating whether the handle value is invalid.
         /// </summary>
         /// <returns>true if the handle value is invalid; otherwise, false.</returns>
-        public override bool IsInvalid
-        {
-            get { return handle == IntPtr.Zero; }
-        }
+        public override bool IsInvalid => handle == IntPtr.Zero;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="SafeHGlobal"/> class.

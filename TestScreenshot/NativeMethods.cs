@@ -1,16 +1,12 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Runtime.InteropServices;
+using System.Security;
 
 namespace TestScreenshot
 {
-    [System.Security.SuppressUnmanagedCodeSecurity()]
-    internal sealed class NativeMethods
+    [SuppressUnmanagedCodeSecurity]
+    static class NativeMethods
     {
-        private NativeMethods() { }
-
         internal static bool IsWindowInForeground(IntPtr hWnd)
         {
             return hWnd == GetForegroundWindow();

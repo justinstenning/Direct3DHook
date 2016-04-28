@@ -1,7 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿using SharpDX;
+using SharpDX.Direct3D11;
 
 namespace Capture.Hook.DX11
 {
@@ -28,29 +26,22 @@ namespace Capture.Hook.DX11
     // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
     // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
     // THE SOFTWARE.
-    using System;
-    using System.Collections.Generic;
-    using System.Linq;
-    using System.Text;
-
-    using SharpDX.Direct3D;
-    using SharpDX.Direct3D11;
-
-    public class DeviceManager : SharpDX.Component
+    
+    public class DeviceManager : Component
     {
         // Direct3D Objects
-        protected SharpDX.Direct3D11.Device d3dDevice;
-        protected SharpDX.Direct3D11.DeviceContext d3dContext;
+        protected readonly Device d3dDevice;
+        protected readonly DeviceContext d3dContext;
 
         /// <summary>
         /// Gets the Direct3D11 device.
         /// </summary>
-        public SharpDX.Direct3D11.Device Direct3DDevice { get { return d3dDevice; } }
+        public Device Direct3DDevice => d3dDevice;
 
         /// <summary>
         /// Gets the Direct3D11 immediate context.
         /// </summary>
-        public SharpDX.Direct3D11.DeviceContext Direct3DContext { get { return d3dContext; } }
+        public DeviceContext Direct3DContext => d3dContext;
 
         public DeviceManager(Device device)
         {

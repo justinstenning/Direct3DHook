@@ -1,20 +1,11 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using EasyHook;
+using System.Diagnostics;
 using System.Runtime.Remoting;
 using System.Runtime.Remoting.Channels.Ipc;
-using System.IO;
-using Capture.Interface;
-using System.Diagnostics;
 using System.Threading;
 using Capture.Hook;
-using System.Security.Principal;
-using System.Security.Cryptography;
-using System.Security.AccessControl;
-using System.Runtime.Remoting.Channels;
-using System.Runtime.Serialization.Formatters;
+using Capture.Interface;
+using EasyHook;
 
 namespace Capture
 {
@@ -23,10 +14,10 @@ namespace Capture
         /// <summary>
         /// Must be null to allow a random channel name to be generated
         /// </summary>
-        string _channelName = null;
-        private IpcServerChannel _screenshotServer;
-        private CaptureInterface _serverInterface;
-        public Process Process { get; set; }
+        readonly string _channelName;
+
+        IpcServerChannel _screenshotServer;
+        public Process Process { get; }
 
         /// <summary>
         /// Prepares capturing in the target process. Note that the process must not already be hooked, and must have a <see cref="Process.MainWindowHandle"/>.
@@ -51,14 +42,14 @@ namespace Capture
             }
 
             captureInterface.ProcessId = process.Id;
-            _serverInterface = captureInterface;
+            CaptureInterface = captureInterface;
             //_serverInterface = new CaptureInterface() { ProcessId = process.Id };
 
             // Initialise the IPC server (with our instance of _serverInterface)
-            _screenshotServer = RemoteHooking.IpcCreateServer<CaptureInterface>(
+            _screenshotServer = RemoteHooking.IpcCreateServer(
                 ref _channelName,
                 WellKnownObjectMode.Singleton,
-                _serverInterface);
+                CaptureInterface);
 
             try
             {
@@ -92,17 +83,13 @@ namespace Capture
             BringProcessWindowToFront();
         }
 
-        public CaptureInterface CaptureInterface
-        {
-            get { return _serverInterface; }
-        }
+        public CaptureInterface CaptureInterface { get; }
 
         ~CaptureProcess()
         {
             Dispose(false);
         }
-
-
+        
         #region Private methods
 
         /// <summary>
@@ -111,10 +98,10 @@ namespace Capture
         /// <remarks>If the window does not come to the front within approx. 30 seconds an exception is raised</remarks>
         public void BringProcessWindowToFront()
         {
-            if (this.Process == null)
+            if (Process == null)
                 return;
-            IntPtr handle = this.Process.MainWindowHandle;
-            int i = 0;
+            var handle = Process.MainWindowHandle;
+            var i = 0;
 
             while (!NativeMethods.IsWindowInForeground(handle))
             {
@@ -157,7 +144,7 @@ namespace Capture
 
         #region IDispose
 
-        private bool _disposed = false;
+        bool _disposed;
         public void Dispose()
         {
             Dispose(true);
@@ -171,7 +158,7 @@ namespace Capture
                 if (disposing)
                 {
                     // Disconnect the IPC (which causes the remote entry point to exit)
-                    _serverInterface.Disconnect();
+                    CaptureInterface.Disconnect();
                 }
 
                 _disposed = true;

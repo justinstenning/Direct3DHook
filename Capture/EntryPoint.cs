@@ -1,31 +1,35 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+using System.Runtime.Remoting;
+using System.Runtime.Remoting.Channels;
+using System.Runtime.Remoting.Channels.Ipc;
+using System.Runtime.Serialization.Formatters;
+using System.Threading;
+using System.Threading.Tasks;
 using Capture.Hook;
 using Capture.Interface;
-using System.Threading.Tasks;
-using System.Runtime.Remoting.Channels.Ipc;
+using EasyHook;
 
 namespace Capture
 {
-    public class EntryPoint : EasyHook.IEntryPoint
+    public class EntryPoint : IEntryPoint
     {
-        List<IDXHook> _directXHooks = new List<IDXHook>();
-        IDXHook _directXHook = null;
-        private CaptureInterface _interface;
-        private System.Threading.ManualResetEvent _runWait;
-        ClientCaptureInterfaceEventProxy _clientEventProxy = new ClientCaptureInterfaceEventProxy();
-        IpcServerChannel _clientServerChannel = null;
+        readonly List<IDXHook> _directXHooks = new List<IDXHook>();
+        IDXHook _directXHook;
+        readonly CaptureInterface _interface;
+        ManualResetEvent _runWait;
+        readonly ClientCaptureInterfaceEventProxy _clientEventProxy = new ClientCaptureInterfaceEventProxy();
+        readonly IpcServerChannel _clientServerChannel = null;
 
         public EntryPoint(
-            EasyHook.RemoteHooking.IContext context,
-            String channelName,
+            RemoteHooking.IContext context,
+            string channelName,
             CaptureConfig config)
         {
             // Get reference to IPC to host application
             // Note: any methods called or events triggered against _interface will execute in the host process.
-            _interface = EasyHook.RemoteHooking.IpcConnectClient<CaptureInterface>(channelName);
+            _interface = RemoteHooking.IpcConnectClient<CaptureInterface>(channelName);
 
             // We try to ping immediately, if it fails then injection fails
             _interface.Ping();
@@ -33,36 +37,32 @@ namespace Capture
             #region Allow client event handlers (bi-directional IPC)
             
             // Attempt to create a IpcServerChannel so that any event handlers on the client will function correctly
-            System.Collections.IDictionary properties = new System.Collections.Hashtable();
+            IDictionary properties = new Hashtable();
             properties["name"] = channelName;
             properties["portName"] = channelName + Guid.NewGuid().ToString("N"); // random portName so no conflict with existing channels of channelName
 
-            System.Runtime.Remoting.Channels.BinaryServerFormatterSinkProvider binaryProv = new System.Runtime.Remoting.Channels.BinaryServerFormatterSinkProvider();
-            binaryProv.TypeFilterLevel = System.Runtime.Serialization.Formatters.TypeFilterLevel.Full;
+            var binaryProv = new BinaryServerFormatterSinkProvider {TypeFilterLevel = TypeFilterLevel.Full};
 
-            System.Runtime.Remoting.Channels.Ipc.IpcServerChannel _clientServerChannel = new System.Runtime.Remoting.Channels.Ipc.IpcServerChannel(properties, binaryProv);
-            System.Runtime.Remoting.Channels.ChannelServices.RegisterChannel(_clientServerChannel, false);
+            var _clientServerChannel = new IpcServerChannel(properties, binaryProv);
+            ChannelServices.RegisterChannel(_clientServerChannel, false);
             
             #endregion
         }
 
         public void Run(
-            EasyHook.RemoteHooking.IContext context,
-            String channelName,
+            RemoteHooking.IContext context,
+            string channelName,
             CaptureConfig config)
         {
             // When not using GAC there can be issues with remoting assemblies resolving correctly
             // this is a workaround that ensures that the current assembly is correctly associated
-            AppDomain currentDomain = AppDomain.CurrentDomain;
-            currentDomain.AssemblyResolve += (sender, args) =>
-            {
-                return this.GetType().Assembly.FullName == args.Name ? this.GetType().Assembly : null;
-            };
+            var currentDomain = AppDomain.CurrentDomain;
+            currentDomain.AssemblyResolve += (sender, args) => GetType().Assembly.FullName == args.Name ? GetType().Assembly : null;
 
             // NOTE: This is running in the target process
-            _interface.Message(MessageType.Information, "Injected into process Id:{0}.", EasyHook.RemoteHooking.GetCurrentProcessId());
+            _interface.Message(MessageType.Information, "Injected into process Id:{0}.", RemoteHooking.GetCurrentProcessId());
 
-            _runWait = new System.Threading.ManualResetEvent(false);
+            _runWait = new ManualResetEvent(false);
             _runWait.Reset();
             try
             {
@@ -105,21 +105,21 @@ namespace Capture
             {
                 try
                 {
-                    _interface.Message(MessageType.Information, "Disconnecting from process {0}", EasyHook.RemoteHooking.GetCurrentProcessId());
+                    _interface.Message(MessageType.Information, "Disconnecting from process {0}", RemoteHooking.GetCurrentProcessId());
                 }
                 catch
                 {
                 }
 
                 // Remove the client server channel (that allows client event handlers)
-                System.Runtime.Remoting.Channels.ChannelServices.UnregisterChannel(_clientServerChannel);
+                ChannelServices.UnregisterChannel(_clientServerChannel);
 
                 // Always sleep long enough for any remaining messages to complete sending
-                System.Threading.Thread.Sleep(100);
+                Thread.Sleep(100);
             }
         }
 
-        private void DisposeDirectXHook()
+        void DisposeDirectXHook()
         {
             if (_directXHooks != null)
             {
@@ -127,7 +127,7 @@ namespace Capture
                 {
                     _interface.Message(MessageType.Debug, "Disposing of hooks...");
                 }
-                catch (System.Runtime.Remoting.RemotingException) { } // Ignore channel remoting errors
+                catch (RemotingException) { } // Ignore channel remoting errors
 
                 // Dispose of the hooks so they are removed
                 foreach (var dxHook in _directXHooks)
@@ -137,13 +137,13 @@ namespace Capture
             }
         }
 
-        private bool InitialiseDirectXHook(CaptureConfig config)
+        bool InitialiseDirectXHook(CaptureConfig config)
         {
-            Direct3DVersion version = config.Direct3DVersion;
+            var version = config.Direct3DVersion;
 
-            List<Direct3DVersion> loadedVersions = new List<Direct3DVersion>();
+            var loadedVersions = new List<Direct3DVersion>();
 
-            bool isX64Process = EasyHook.RemoteHooking.IsX64Process(EasyHook.RemoteHooking.GetCurrentProcessId());
+            var isX64Process = RemoteHooking.IsX64Process(RemoteHooking.GetCurrentProcessId());
             _interface.Message(MessageType.Information, "Remote process is a {0}-bit process.", isX64Process ? "64" : "32");
 
             try
@@ -153,14 +153,14 @@ namespace Capture
                     // Attempt to determine the correct version based on loaded module.
                     // In most cases this will work fine, however it is perfectly ok for an application to use a D3D10 device along with D3D11 devices
                     // so the version might matched might not be the one you want to use
-                    IntPtr d3D9Loaded = IntPtr.Zero;
-                    IntPtr d3D10Loaded = IntPtr.Zero;
-                    IntPtr d3D10_1Loaded = IntPtr.Zero;
-                    IntPtr d3D11Loaded = IntPtr.Zero;
-                    IntPtr d3D11_1Loaded = IntPtr.Zero;
+                    var d3D9Loaded = IntPtr.Zero;
+                    var d3D10Loaded = IntPtr.Zero;
+                    var d3D10_1Loaded = IntPtr.Zero;
+                    var d3D11Loaded = IntPtr.Zero;
+                    var d3D11_1Loaded = IntPtr.Zero;
 
-                    int delayTime = 100;
-                    int retryCount = 0;
+                    var delayTime = 100;
+                    var retryCount = 0;
                     while (d3D9Loaded == IntPtr.Zero && d3D10Loaded == IntPtr.Zero && d3D10_1Loaded == IntPtr.Zero && d3D11Loaded == IntPtr.Zero && d3D11_1Loaded == IntPtr.Zero)
                     {
                         retryCount++;
@@ -169,7 +169,7 @@ namespace Capture
                         d3D10_1Loaded = NativeMethods.GetModuleHandle("d3d10_1.dll");
                         d3D11Loaded = NativeMethods.GetModuleHandle("d3d11.dll");
                         d3D11_1Loaded = NativeMethods.GetModuleHandle("d3d11_1.dll");
-                        System.Threading.Thread.Sleep(delayTime);
+                        Thread.Sleep(delayTime);
 
                         if (retryCount * delayTime > 5000)
                         {
@@ -178,7 +178,6 @@ namespace Capture
                         }
                     }
 
-                    version = Direct3DVersion.Unknown;
                     if (d3D11_1Loaded != IntPtr.Zero)
                     {
                         _interface.Message(MessageType.Debug, "Autodetect found Direct3D 11.1");
@@ -261,20 +260,20 @@ namespace Capture
         #region Check Host Is Alive
 
         Task _checkAlive;
-        long _stopCheckAlive = 0;
+        long _stopCheckAlive;
         
         /// <summary>
         /// Begin a background thread to check periodically that the host process is still accessible on its IPC channel
         /// </summary>
-        private void StartCheckHostIsAliveThread()
+        void StartCheckHostIsAliveThread()
         {
             _checkAlive = new Task(() =>
             {
                 try
                 {
-                    while (System.Threading.Interlocked.Read(ref _stopCheckAlive) == 0)
+                    while (Interlocked.Read(ref _stopCheckAlive) == 0)
                     {
-                        System.Threading.Thread.Sleep(1000);
+                        Thread.Sleep(1000);
 
                         // .NET Remoting exceptions will throw RemotingException
                         _interface.Ping();
@@ -293,9 +292,9 @@ namespace Capture
         /// <summary>
         /// Tell the _checkAlive thread that it can exit if it hasn't already
         /// </summary>
-        private void StopCheckHostIsAliveThread()
+        void StopCheckHostIsAliveThread()
         {
-            System.Threading.Interlocked.Increment(ref _stopCheckAlive);
+            Interlocked.Increment(ref _stopCheckAlive);
         }
 
         #endregion

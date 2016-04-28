@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Runtime.InteropServices;
-
-namespace Capture.Hook
+﻿namespace Capture.Hook
 {
     /// <summary>
     /// The full list of IDirect3DDevice9 functions with the correct index
@@ -129,7 +123,7 @@ namespace Capture.Hook
         DrawRectPatch = 115,
         DrawTriPatch = 116,
         DeletePatch = 117,
-        CreateQuery = 118,
+        CreateQuery = 118
     }
 
     public enum Direct3DDevice9ExFunctionOrdinals : short
@@ -148,7 +142,7 @@ namespace Capture.Hook
         CreateOffscreenPlainSurfaceEx = 130,
         CreateDepthStencilSurfaceEx = 131,
         ResetEx = 132,
-        GetDisplayModeEx = 133,
+        GetDisplayModeEx = 133
     }
 
 }

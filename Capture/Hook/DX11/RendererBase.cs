@@ -1,4 +1,7 @@
 ﻿
+using SharpDX;
+using SharpDX.Direct3D11;
+
 namespace Capture.Hook.DX11
 {
     // Copyright (c) 2013 Justin Stenning
@@ -24,20 +27,14 @@ namespace Capture.Hook.DX11
     // LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
     // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
     // THE SOFTWARE.
-    using SharpDX;
-    using System;
-    using System.Collections.Generic;
-    using System.Linq;
-    using System.Text;
-    using System.Threading.Tasks;
-
+    
     public abstract class RendererBase : Component
     {
         public DeviceManager DeviceManager { get; protected set; }
-        public virtual bool Show { get; set; }
+        public virtual bool Show { get; }
         public Matrix World;
 
-        public RendererBase()
+        protected RendererBase()
         {
             World = Matrix.Identity;
             Show = true;
@@ -49,11 +46,11 @@ namespace Capture.Hook.DX11
         /// <param name="deviceManager"></param>
         public virtual void Initialize(DeviceManager dm)
         {
-            this.DeviceManager = dm;
+            DeviceManager = dm;
 
             // The device is already initialized, create
             // any device resources immediately.
-            if (this.DeviceManager.Direct3DDevice != null)
+            if (DeviceManager.Direct3DDevice != null)
             {
                 CreateDeviceDependentResources();
             }
@@ -88,13 +85,13 @@ namespace Capture.Hook.DX11
         /// </summary>
         protected abstract void DoRender();
 
-        public void Render(SharpDX.Direct3D11.DeviceContext context)
+        public void Render(DeviceContext context)
         {
             if (Show)
                 DoRender(context);
         }
 
-        protected virtual void DoRender(SharpDX.Direct3D11.DeviceContext context)
+        protected virtual void DoRender(DeviceContext context)
         {
 
         }
