@@ -1,9 +1,7 @@
-﻿using EasyHook;
-using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿using System;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
-using System.Text;
+using EasyHook;
 
 namespace Capture.Hook
 {
@@ -31,7 +29,7 @@ namespace Capture.Hook
             : base(funcToHook, newFunc, owner)
         {
             // Debug assertion that T is a Delegate type
-            System.Diagnostics.Debug.Assert(typeof(Delegate).IsAssignableFrom(typeof(T)));
+            Debug.Assert(typeof(Delegate).IsAssignableFrom(typeof(T)));
 
             Original = (T)(object)Marshal.GetDelegateForFunctionPointer(funcToHook, typeof(T));
         }
@@ -45,17 +43,17 @@ namespace Capture.Hook
         /// <summary>
         /// The hooked function location
         /// </summary>
-        public IntPtr FuncToHook { get; private set; }
+        public IntPtr FuncToHook { get; }
         
         /// <summary>
         /// The replacement delegate
         /// </summary>
-        public Delegate NewFunc { get; private set; }
+        public Delegate NewFunc { get; }
         
         /// <summary>
         /// The callback object passed to LocalHook constructor
         /// </summary>
-        public object Owner { get; private set; }
+        public object Owner { get; }
         
         /// <summary>
         /// The <see cref="EasyHook.LocalHook"/> instance
@@ -75,9 +73,9 @@ namespace Capture.Hook
         /// <param name="owner">The object to assign as the "callback" object within the <see cref="EasyHook.LocalHook"/> instance.</param>
         public Hook(IntPtr funcToHook, Delegate newFunc, object owner)
         {
-            this.FuncToHook = funcToHook;
-            this.NewFunc = newFunc;
-            this.Owner = owner;
+            FuncToHook = funcToHook;
+            NewFunc = newFunc;
+            Owner = owner;
             
             CreateHook();
         }
@@ -91,18 +89,18 @@ namespace Capture.Hook
         {
             if (LocalHook != null) return;
 
-            this.LocalHook = LocalHook.Create(FuncToHook, NewFunc, Owner);
+            LocalHook = LocalHook.Create(FuncToHook, NewFunc, Owner);
         }
 
         protected void UnHook()
         {
-            if (this.IsActive)
+            if (IsActive)
                 Deactivate();
 
-            if (this.LocalHook != null)
+            if (LocalHook != null)
             {
-                this.LocalHook.Dispose();
-                this.LocalHook = null;
+                LocalHook.Dispose();
+                LocalHook = null;
             }
         }
 
@@ -111,13 +109,13 @@ namespace Capture.Hook
         /// </summary>
         public void Activate()
         {
-            if (this.LocalHook == null)
+            if (LocalHook == null)
                 CreateHook();
 
-            if (this.IsActive) return;
+            if (IsActive) return;
             
-            this.IsActive = true;
-            this.LocalHook.ThreadACL.SetExclusiveACL(new Int32[] { 0 });
+            IsActive = true;
+            LocalHook.ThreadACL.SetExclusiveACL(new[] { 0 });
         }
 
         /// <summary>
@@ -125,10 +123,10 @@ namespace Capture.Hook
         /// </summary>
         public void Deactivate()
         {
-            if (!this.IsActive) return;
+            if (!IsActive) return;
 
-            this.IsActive = false;
-            this.LocalHook.ThreadACL.SetInclusiveACL(new Int32[] { 0 });
+            IsActive = false;
+            LocalHook.ThreadACL.SetInclusiveACL(new[] { 0 });
         }
 
 

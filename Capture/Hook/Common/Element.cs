@@ -1,9 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Runtime.Remoting;
 using System.Security.Permissions;
-using System.Text;
 
 namespace Capture.Hook.Common
 {
@@ -40,26 +37,23 @@ namespace Capture.Hook.Common
         protected virtual void Dispose(bool disposing)
         {
             if (disposing)
-            {
                 Disconnect();
-            }
         }
 
         protected void SafeDispose(IDisposable disposableObj)
         {
-            if (disposableObj != null)
-                disposableObj.Dispose();
+            disposableObj?.Dispose();
         }
 
         /// <summary>
         /// Disconnects the remoting channel(s) of this object and all nested objects.
         /// </summary>
-        private void Disconnect()
+        void Disconnect()
         {
             RemotingServices.Disconnect(this);
         }
 
-        [SecurityPermissionAttribute(SecurityAction.Demand, Flags = SecurityPermissionFlag.Infrastructure)]
+        [SecurityPermission(SecurityAction.Demand, Flags = SecurityPermissionFlag.Infrastructure)]
         public override object InitializeLifetimeService()
         {
             // Returning null designates an infinite non-expiring lease.

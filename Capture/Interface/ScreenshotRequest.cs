@@ -1,7 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Drawing;
 using System.Runtime.Remoting;
 using System.Security.Permissions;
@@ -11,8 +8,8 @@ namespace Capture.Interface
     [Serializable]
     public class ScreenshotRequest: MarshalByRefObject, IDisposable
     {
-        public Guid RequestId { get; set; }
-        public Rectangle RegionToCapture { get; set; }
+        public Guid RequestId { get; }
+        public Rectangle RegionToCapture { get; }
         public Size? Resize { get; set; }
         public ImageFormat Format { get; set; }
 
@@ -22,16 +19,11 @@ namespace Capture.Interface
         }
 
         public ScreenshotRequest(Rectangle region)
-            : this(Guid.NewGuid(), region, null)
+            : this(Guid.NewGuid(), region)
         {
         }
 
-        public ScreenshotRequest(Guid requestId, Rectangle region)
-            : this(requestId, region, null)
-        {
-        }
-
-        public ScreenshotRequest(Guid requestId, Rectangle region, Size? resize)
+        public ScreenshotRequest(Guid requestId, Rectangle region, Size? resize = null)
         {
             RequestId = requestId;
             RegionToCapture = region;
@@ -51,7 +43,7 @@ namespace Capture.Interface
             Dispose(false);
         }
 
-        private bool _disposed;
+        bool _disposed;
         public void Dispose()
         {
             Dispose(true);
@@ -73,12 +65,12 @@ namespace Capture.Interface
         /// <summary>
         /// Disconnects the remoting channel(s) of this object and all nested objects.
         /// </summary>
-        private void Disconnect()
+        void Disconnect()
         {
             RemotingServices.Disconnect(this);
         }
 
-        [SecurityPermissionAttribute(SecurityAction.Demand, Flags = SecurityPermissionFlag.Infrastructure)]
+        [SecurityPermission(SecurityAction.Demand, Flags = SecurityPermissionFlag.Infrastructure)]
         public override object InitializeLifetimeService()
         {
             // Returning null designates an infinite non-expiring lease.

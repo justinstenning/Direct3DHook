@@ -1,12 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using SharpDX;
+﻿using System.Collections.Generic;
 
 namespace Capture.Hook.Common
 {
-    internal interface IOverlay: IOverlayElement
+    interface IOverlay: IOverlayElement
     {
         List<IOverlayElement> Elements { get; set; }
     }

@@ -1,9 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Reflection;
 using System.IO;
+using System.Reflection;
 
 namespace Capture.Interface
 {
@@ -12,7 +9,7 @@ namespace Capture.Interface
     {
         public Direct3DVersion Direct3DVersion { get; set; }
         public bool ShowOverlay { get; set; }
-        public int TargetFramesPerSecond { get; set; }
+        public int TargetFramesPerSecond { get; }
         public string TargetFolder { get; set; }
 
         public CaptureConfig()

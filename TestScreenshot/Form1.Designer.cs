@@ -1,11 +1,14 @@
-﻿namespace TestScreenshot
+﻿using System.ComponentModel;
+using System.Windows.Forms;
+
+namespace TestScreenshot
 {
     partial class Form1
     {
         /// <summary>
         /// Required designer variable.
         /// </summary>
-        private System.ComponentModel.IContainer components = null;
+        private IContainer components = null;
 
         /// <summary>
         /// Clean up any resources being used.
@@ -468,40 +471,40 @@
 
         #endregion
 
-        private System.Windows.Forms.Button btnInject;
-        private System.Windows.Forms.Button btnCapture;
-        private System.Windows.Forms.PictureBox pictureBox1;
-        private System.Windows.Forms.Button btnLoadTest;
-        private System.Windows.Forms.TextBox txtNumber;
-        private System.Windows.Forms.ProgressBar progressBar1;
-        private System.Windows.Forms.TextBox textBox1;
-        private System.Windows.Forms.Label label1;
-        private System.Windows.Forms.Label label2;
-        private System.Windows.Forms.Label label3;
-        private System.Windows.Forms.Label label4;
-        private System.Windows.Forms.TextBox txtCaptureX;
-        private System.Windows.Forms.TextBox txtCaptureY;
-        private System.Windows.Forms.TextBox txtCaptureWidth;
-        private System.Windows.Forms.TextBox txtCaptureHeight;
-        private System.Windows.Forms.Label label5;
-        private System.Windows.Forms.TextBox txtDebugLog;
-        private System.Windows.Forms.Label label6;
-        private System.Windows.Forms.Label label7;
-        private System.Windows.Forms.CheckBox cbAutoGAC;
-        private System.Windows.Forms.RadioButton rbDirect3D9;
-        private System.Windows.Forms.RadioButton rbDirect3D10;
-        private System.Windows.Forms.RadioButton rbDirect3D11;
-        private System.Windows.Forms.CheckBox cbDrawOverlay;
-        private System.Windows.Forms.RadioButton rbAutodetect;
-        private System.Windows.Forms.RadioButton rbDirect3D10_1;
-        private System.Windows.Forms.Label label8;
-        private System.Windows.Forms.Label label9;
-        private System.Windows.Forms.TextBox txtResizeHeight;
-        private System.Windows.Forms.TextBox txtResizeWidth;
-        private System.Windows.Forms.Label label10;
-        private System.Windows.Forms.Label label11;
-        private System.Windows.Forms.Label label12;
-        private System.Windows.Forms.ComboBox cmbFormat;
+        private Button btnInject;
+        private Button btnCapture;
+        private PictureBox pictureBox1;
+        private Button btnLoadTest;
+        private TextBox txtNumber;
+        private ProgressBar progressBar1;
+        private TextBox textBox1;
+        private Label label1;
+        private Label label2;
+        private Label label3;
+        private Label label4;
+        private TextBox txtCaptureX;
+        private TextBox txtCaptureY;
+        private TextBox txtCaptureWidth;
+        private TextBox txtCaptureHeight;
+        private Label label5;
+        private TextBox txtDebugLog;
+        private Label label6;
+        private Label label7;
+        private CheckBox cbAutoGAC;
+        private RadioButton rbDirect3D9;
+        private RadioButton rbDirect3D10;
+        private RadioButton rbDirect3D11;
+        private CheckBox cbDrawOverlay;
+        private RadioButton rbAutodetect;
+        private RadioButton rbDirect3D10_1;
+        private Label label8;
+        private Label label9;
+        private TextBox txtResizeHeight;
+        private TextBox txtResizeWidth;
+        private Label label10;
+        private Label label11;
+        private Label label12;
+        private ComboBox cmbFormat;
     }
 }
 

@@ -1,47 +1,40 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using Capture.Hook.Common;
-using SharpDX.Direct3D11;
-using SharpDX;
+﻿using System.Collections.Generic;
 using System.Diagnostics;
+using Capture.Hook.Common;
+using SharpDX;
+using SharpDX.Direct3D11;
+using SharpDX.DXGI;
+using Device = SharpDX.Direct3D11.Device;
 
 namespace Capture.Hook.DX11
 {
-    internal class DXOverlayEngine: Component
+    class DXOverlayEngine: Component
     {
-        public List<IOverlay> Overlays { get; set; }
-        public bool DeferredContext
-        {
-            get
-            {
-                return _deviceContext.TypeInfo == DeviceContextType.Deferred;
-            }
-        }
+        public List<IOverlay> Overlays { get; }
+        public bool DeferredContext => _deviceContext.TypeInfo == DeviceContextType.Deferred;
 
-        bool _initialised = false;
-        bool _initialising = false;
+        bool _initialised;
+        bool _initialising;
 
         Device _device;
         DeviceContext _deviceContext;
         Texture2D _renderTarget;
         RenderTargetView _renderTargetView;
         DXSprite _spriteEngine;
-        Dictionary<string, DXFont> _fontCache = new Dictionary<string, DXFont>();
-        Dictionary<Element, DXImage> _imageCache = new Dictionary<Element, DXImage>();
+        readonly Dictionary<string, DXFont> _fontCache = new Dictionary<string, DXFont>();
+        readonly Dictionary<Element, DXImage> _imageCache = new Dictionary<Element, DXImage>();
 
         public DXOverlayEngine()
         {
             Overlays = new List<IOverlay>();
         }
 
-        private void EnsureInitiliased()
+        void EnsureInitiliased()
         {
             Debug.Assert(_initialised);
         }
 
-        public bool Initialise(SharpDX.DXGI.SwapChain swapChain)
+        public bool Initialise(SwapChain swapChain)
         {
             return Initialise(swapChain.GetDevice<Device>(), swapChain.GetBackBuffer<Texture2D>(0));
         }
@@ -93,7 +86,7 @@ namespace Capture.Hook.DX11
             }
         }
 
-        private void IntialiseElementResources()
+        void IntialiseElementResources()
         {
             foreach (var overlay in Overlays)
             {
@@ -114,7 +107,7 @@ namespace Capture.Hook.DX11
             }
         }
 
-        private void Begin()
+        void Begin()
         {
             //if (!DeferredContext)
             //{
@@ -145,13 +138,13 @@ namespace Capture.Hook.DX11
 
                     if (textElement != null)
                     {
-                        DXFont font = GetFontForTextElement(textElement);
-                        if (font != null && !String.IsNullOrEmpty(textElement.Text))
+                        var font = GetFontForTextElement(textElement);
+                        if (font != null && !string.IsNullOrEmpty(textElement.Text))
                             _spriteEngine.DrawString(textElement.Location.X, textElement.Location.Y, textElement.Text, textElement.Color, font);
                     }
                     else if (imageElement != null)
                     {
-                        DXImage image = GetImageForImageElement(imageElement);
+                        var image = GetImageForImageElement(imageElement);
                         if (image != null)
                             _spriteEngine.DrawImage(imageElement.Location.X, imageElement.Location.Y, imageElement.Scale, imageElement.Angle, imageElement.Tint, image);
                     }
@@ -161,7 +154,7 @@ namespace Capture.Hook.DX11
             End();
         }
 
-        private void End()
+        void End()
         {
             if (DeferredContext)
             {
@@ -173,9 +166,9 @@ namespace Capture.Hook.DX11
 
         DXFont GetFontForTextElement(TextElement element)
         {
-            DXFont result = null;
+            DXFont result;
 
-            string fontKey = String.Format("{0}{1}{2}", element.Font.Name, element.Font.Size, element.Font.Style, element.AntiAliased);
+            var fontKey = string.Format("{0}{1}{2}", element.Font.Name, element.Font.Size, element.Font.Style, element.AntiAliased);
 
             if (!_fontCache.TryGetValue(fontKey, out result))
             {
@@ -188,7 +181,7 @@ namespace Capture.Hook.DX11
 
         DXImage GetImageForImageElement(ImageElement element)
         {
-            DXImage result = null;
+            DXImage result;
 
             if (!_imageCache.TryGetValue(element, out result))
             {
@@ -214,8 +207,7 @@ namespace Capture.Hook.DX11
 
         void SafeDispose(DisposeBase disposableObj)
         {
-            if (disposableObj != null)
-                disposableObj.Dispose();
+            disposableObj?.Dispose();
         }
     }
 }

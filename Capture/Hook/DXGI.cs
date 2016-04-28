@@ -1,13 +1,9 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Runtime.InteropServices;
 using SharpDX.DXGI;
 
 namespace Capture.Hook
 {
-    internal static class DXGI
+    static class DXGI
     {
         public enum DXGISwapChainVTbl : short
         {
@@ -35,23 +31,23 @@ namespace Capture.Hook
             ResizeTarget = 14,
             GetContainingOutput = 15,
             GetFrameStatistics = 16,
-            GetLastPresentCount = 17,
+            GetLastPresentCount = 17
         }
 
         public const int DXGI_SWAPCHAIN_METHOD_COUNT = 18;
 
-        public static SharpDX.DXGI.SwapChainDescription CreateSwapChainDescription(IntPtr windowHandle)
+        public static SwapChainDescription CreateSwapChainDescription(IntPtr windowHandle)
         {
-            return new SharpDX.DXGI.SwapChainDescription
+            return new SwapChainDescription
             {
                 BufferCount = 1,
-                Flags = SharpDX.DXGI.SwapChainFlags.None,
+                Flags = SwapChainFlags.None,
                 IsWindowed = true,
-                ModeDescription = new SharpDX.DXGI.ModeDescription(100, 100, new Rational(60, 1), SharpDX.DXGI.Format.R8G8B8A8_UNorm),
+                ModeDescription = new ModeDescription(100, 100, new Rational(60, 1), Format.R8G8B8A8_UNorm),
                 OutputHandle = windowHandle,
-                SampleDescription = new SharpDX.DXGI.SampleDescription(1, 0),
-                SwapEffect = SharpDX.DXGI.SwapEffect.Discard,
-                Usage = SharpDX.DXGI.Usage.RenderTargetOutput
+                SampleDescription = new SampleDescription(1, 0),
+                SwapEffect = SwapEffect.Discard,
+                Usage = Usage.RenderTargetOutput
             };
         }
 

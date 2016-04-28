@@ -1,21 +1,13 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Windows.Forms;
 using System.Diagnostics;
-using System.Threading;
-using EasyHook;
-using System.Runtime.Remoting.Channels.Ipc;
-using System.Runtime.Remoting;
-using System.Runtime.InteropServices;
+using System.Drawing;
 using System.IO;
-using Capture.Interface;
-using Capture.Hook;
+using System.Threading;
+using System.Windows.Forms;
 using Capture;
+using Capture.Hook;
+using Capture.Interface;
+using EasyHook;
 
 namespace TestScreenshot
 {
@@ -26,11 +18,11 @@ namespace TestScreenshot
             InitializeComponent();
         }
 
-        private void Form1_Load(object sender, EventArgs e)
+        void Form1_Load(object sender, EventArgs e)
         {
         }
 
-        private void btnInject_Click(object sender, EventArgs e)
+        void btnInject_Click(object sender, EventArgs e)
         {
             if (_captureProcess == null)
             {
@@ -70,15 +62,16 @@ namespace TestScreenshot
             }
         }
 
-        int processId = 0;
+        int processId;
         Process _process;
         CaptureProcess _captureProcess;
-        private void AttachProcess()
+
+        void AttachProcess()
         {
-            string exeName = Path.GetFileNameWithoutExtension(textBox1.Text);
+            var exeName = Path.GetFileNameWithoutExtension(textBox1.Text);
             
-            Process[] processes = Process.GetProcessesByName(exeName);
-            foreach (Process process in processes)
+            var processes = Process.GetProcessesByName(exeName);
+            foreach (var process in processes)
             {
                 // Simply attach to the first one found.
 
@@ -94,7 +87,7 @@ namespace TestScreenshot
                     continue;
                 }
 
-                Direct3DVersion direct3DVersion = Direct3DVersion.Direct3D10;
+                var direct3DVersion = Direct3DVersion.Direct3D10;
 
                 if (rbDirect3D11.Checked)
                 {
@@ -117,7 +110,7 @@ namespace TestScreenshot
                     direct3DVersion = Direct3DVersion.AutoDetect;
                 }
 
-                CaptureConfig cc = new CaptureConfig()
+                var cc = new CaptureConfig
                 {
                     Direct3DVersion = direct3DVersion,
                     ShowOverlay = cbDrawOverlay.Checked
@@ -127,7 +120,7 @@ namespace TestScreenshot
                 _process = process;
 
                 var captureInterface = new CaptureInterface();
-                captureInterface.RemoteMessage += new MessageReceivedEvent(CaptureInterface_RemoteMessage);
+                captureInterface.RemoteMessage += CaptureInterface_RemoteMessage;
                 _captureProcess = new CaptureProcess(process, cc, captureInterface);
                 
                 break;
@@ -151,9 +144,8 @@ namespace TestScreenshot
         /// <param name="message"></param>
         void CaptureInterface_RemoteMessage(MessageReceivedEventArgs message)
         {
-            txtDebugLog.Invoke(new MethodInvoker(delegate()
-                {
-                    txtDebugLog.Text = String.Format("{0}\r\n{1}", message, txtDebugLog.Text);
+            txtDebugLog.Invoke(new MethodInvoker(delegate {
+                    txtDebugLog.Text = $"{message}\r\n{txtDebugLog.Text}";
                 })
             );
         }
@@ -165,9 +157,8 @@ namespace TestScreenshot
         /// <param name="message"></param>
         void ScreenshotManager_OnScreenshotDebugMessage(int clientPID, string message)
         {
-            txtDebugLog.Invoke(new MethodInvoker(delegate()
-                {
-                    txtDebugLog.Text = String.Format("{0}:{1}\r\n{2}", clientPID, message, txtDebugLog.Text);
+            txtDebugLog.Invoke(new MethodInvoker(delegate {
+                    txtDebugLog.Text = $"{clientPID}:{message}\r\n{txtDebugLog.Text}";
                 })
             );
         }
@@ -175,7 +166,7 @@ namespace TestScreenshot
         DateTime start;
         DateTime end;
 
-        private void btnCapture_Click(object sender, EventArgs e)
+        void btnCapture_Click(object sender, EventArgs e)
         {
             start = DateTime.Now;
             progressBar1.Maximum = 1;
@@ -185,7 +176,7 @@ namespace TestScreenshot
             DoRequest();
         }
 
-        private void btnLoadTest_Click(object sender, EventArgs e)
+        void btnLoadTest_Click(object sender, EventArgs e)
         {
             // Note: we bring the target application into the foreground because
             //       windowed Direct3D applications have a lower framerate 
@@ -204,8 +195,8 @@ namespace TestScreenshot
         /// </summary>
         void DoRequest()
         {
-            progressBar1.Invoke(new MethodInvoker(delegate()
-                {
+            progressBar1.Invoke(new MethodInvoker(delegate
+            {
                     if (progressBar1.Value < progressBar1.Maximum)
                     {
                         progressBar1.PerformStep();
@@ -213,14 +204,14 @@ namespace TestScreenshot
                         _captureProcess.BringProcessWindowToFront();
                         // Initiate the screenshot of the CaptureInterface, the appropriate event handler within the target process will take care of the rest
                         Size? resize = null;
-                        if (!String.IsNullOrEmpty(txtResizeHeight.Text) && !String.IsNullOrEmpty(txtResizeWidth.Text))
-                            resize = new System.Drawing.Size(int.Parse(txtResizeWidth.Text), int.Parse(txtResizeHeight.Text));
+                        if (!string.IsNullOrEmpty(txtResizeHeight.Text) && !string.IsNullOrEmpty(txtResizeWidth.Text))
+                            resize = new Size(int.Parse(txtResizeWidth.Text), int.Parse(txtResizeHeight.Text));
                         _captureProcess.CaptureInterface.BeginGetScreenshot(new Rectangle(int.Parse(txtCaptureX.Text), int.Parse(txtCaptureY.Text), int.Parse(txtCaptureWidth.Text), int.Parse(txtCaptureHeight.Text)), new TimeSpan(0, 0, 2), Callback, resize, (ImageFormat)Enum.Parse(typeof(ImageFormat), cmbFormat.Text));
                     }
                     else
                     {
                         end = DateTime.Now;
-                        txtDebugLog.Text = String.Format("Debug: {0}\r\n{1}", "Total Time: " + (end-start).ToString(), txtDebugLog.Text);
+                        txtDebugLog.Text = $"Debug: {"Total Time: " + (end - start)}\r\n{txtDebugLog.Text}";
                     }
                 })
             );
@@ -234,24 +225,21 @@ namespace TestScreenshot
         /// <param name="screenshotResponse"></param>
         void Callback(IAsyncResult result)
         {
-            using (Screenshot screenshot = _captureProcess.CaptureInterface.EndGetScreenshot(result))
+            using (var screenshot = _captureProcess.CaptureInterface.EndGetScreenshot(result))
             try
             {
                 _captureProcess.CaptureInterface.DisplayInGameText("Screenshot captured...");
-                if (screenshot != null && screenshot.Data != null)
+                if (screenshot?.Data != null)
                 {
-                    pictureBox1.Invoke(new MethodInvoker(delegate()
+                    pictureBox1.Invoke(new MethodInvoker(delegate
                     {
-                        if (pictureBox1.Image != null)
-                        {
-                            pictureBox1.Image.Dispose();
-                        }
+                        pictureBox1.Image?.Dispose();
                         pictureBox1.Image = screenshot.ToBitmap();
                     })
                     );
                 }
 
-                Thread t = new Thread(new ThreadStart(DoRequest));
+                var t = new Thread(DoRequest);
                 t.Start();
             }
             catch

@@ -1,7 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+using System.Drawing;
 
 namespace Capture.Hook.Common
 {
@@ -10,21 +8,15 @@ namespace Capture.Hook.Common
         string _fpsFormat = "{0:N0} fps";
         public override string Text
         {
-            get
-            {
-                return String.Format(_fpsFormat, GetFPS());
-            }
-            set
-            {
-                _fpsFormat = value;
-            }
+            get { return string.Format(_fpsFormat, GetFPS()); }
+            set { _fpsFormat = value; }
         }
 
-        int _frames = 0;
-        int _lastTickCount = 0;
-        float _lastFrameRate = 0;
+        int _frames;
+        int _lastTickCount;
+        float _lastFrameRate;
 
-        public FramesPerSecond(System.Drawing.Font font)
+        public FramesPerSecond(Font font)
             : base(font)
         {
         }
@@ -35,21 +27,19 @@ namespace Capture.Hook.Common
         public override void Frame()
         {
             _frames++;
-            if (Math.Abs(Environment.TickCount - _lastTickCount) > 1000)
-            {
-                _lastFrameRate = (float)_frames * 1000 / Math.Abs(Environment.TickCount - _lastTickCount);
-                _lastTickCount = Environment.TickCount;
-                _frames = 0;
-            }
+
+            if (Math.Abs(Environment.TickCount - _lastTickCount) <= 1000)
+                return;
+
+            _lastFrameRate = (float)_frames * 1000 / Math.Abs(Environment.TickCount - _lastTickCount);
+            _lastTickCount = Environment.TickCount;
+            _frames = 0;
         }
 
         /// <summary>
         /// Return the current frames per second
         /// </summary>
         /// <returns></returns>
-        public float GetFPS()
-        {
-            return _lastFrameRate;
-        }
+        public float GetFPS() => _lastFrameRate;
     }
 }

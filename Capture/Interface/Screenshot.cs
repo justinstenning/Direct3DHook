@@ -1,48 +1,29 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Drawing;
-using System.IO;
+using System.Drawing.Imaging;
 using System.Runtime.Remoting;
 using System.Security.Permissions;
-using System.Runtime.InteropServices;
 
 namespace Capture.Interface
 {
     public class Screenshot : MarshalByRefObject, IDisposable
     {
-        Guid _requestId;
-        public Guid RequestId
-        {
-            get
-            {
-                return _requestId;
-            }
-        }
+        public Guid RequestId { get; }
 
         public ImageFormat Format { get; set; }
 
-        public System.Drawing.Imaging.PixelFormat PixelFormat { get; set; }
+        public PixelFormat PixelFormat { get; set; }
         public int Stride { get; set; }
         public int Height { get; set; }
         public int Width { get; set; }
 
-        byte[] _data;
-        public byte[] Data
-        {
-            get
-            {
-                return _data;
-            }
-        }
+        public byte[] Data { get; }
 
-        private bool _disposed;
+        bool _disposed;
 
         public Screenshot(Guid requestId, byte[] data)
         {
-            _requestId = requestId;
-            _data = data;
+            RequestId = requestId;
+            Data = data;
         }
 
         ~Screenshot()
@@ -58,25 +39,24 @@ namespace Capture.Interface
 
         protected virtual void Dispose(bool disposeManagedResources)
         {
-            if (!_disposed)
-            {
-                if (disposeManagedResources)
-                {
-                    Disconnect();
-                }
-                _disposed = true;
-            }
+            if (_disposed)
+                return;
+
+            if (disposeManagedResources)
+                Disconnect();
+            
+            _disposed = true;
         }
 
         /// <summary>
         /// Disconnects the remoting channel(s) of this object and all nested objects.
         /// </summary>
-        private void Disconnect()
+        void Disconnect()
         {
             RemotingServices.Disconnect(this);
         }
 
-        [SecurityPermissionAttribute(SecurityAction.Demand, Flags = SecurityPermissionFlag.Infrastructure)]
+        [SecurityPermission(SecurityAction.Demand, Flags = SecurityPermissionFlag.Infrastructure)]
         public override object InitializeLifetimeService()
         {
             // Returning null designates an infinite non-expiring lease.

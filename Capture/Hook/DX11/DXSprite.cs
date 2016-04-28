@@ -1,22 +1,27 @@
 ﻿// Adapted from Frank Luna's "Sprites and Text" example here: http://www.d3dcoder.net/resources.htm 
 // checkout his books here: http://www.d3dcoder.net/default.htm
+
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using SharpDX.Direct3D11;
-using SharpDX;
 using System.Diagnostics;
-using SharpDX.D3DCompiler;
 using System.Runtime.InteropServices;
+using SharpDX;
+using SharpDX.D3DCompiler;
+using SharpDX.Direct3D;
+using SharpDX.Direct3D11;
+using SharpDX.DXGI;
+using Buffer = SharpDX.Direct3D11.Buffer;
+using Color = System.Drawing.Color;
+using Device = SharpDX.Direct3D11.Device;
+using MapFlags = SharpDX.Direct3D11.MapFlags;
 
 namespace Capture.Hook.DX11
 {
 
     public class DXSprite : Component
     {
-        Device _device;
-        DeviceContext _deviceContext;
+        readonly Device _device;
+        readonly DeviceContext _deviceContext;
 
         public DXSprite(Device device, DeviceContext deviceContext)
         {
@@ -59,23 +64,23 @@ namespace Capture.Hook.DX11
         EffectShaderResourceVariable _spriteMap;
         ShaderResourceView _batchTexSRV;
         InputLayout _inputLayout;
-        SharpDX.Direct3D11.Buffer _VB;
-        SharpDX.Direct3D11.Buffer _IB;
+        Buffer _VB;
+        Buffer _IB;
         int _texWidth;
         int _texHeight;
-        List<Sprite> _spriteList = new List<Sprite>(128);
+        readonly List<Sprite> _spriteList = new List<Sprite>(128);
         float _screenWidth;
         float _screenHeight;
         CompilationResult _compiledFX;
         Effect _effect;
 
-        SafeHGlobal _indexBuffer = null;
+        SafeHGlobal _indexBuffer;
         public bool Initialize()
         {
             Debug.Assert(!_initialized);
 
             #region Shaders
-            string SpriteFX = @"Texture2D SpriteTex;
+            var SpriteFX = @"Texture2D SpriteTex;
 SamplerState samLinear {
     Filter = MIN_MAG_MIP_LINEAR;
     AddressU = WRAP;
@@ -126,15 +131,15 @@ technique11 SpriteTech {
                     using (var pass = _spriteTech.GetPassByIndex(0))
                     {
                         InputElement[] layoutDesc = {
-                                                        new InputElement("POSITION", 0, SharpDX.DXGI.Format.R32G32B32_Float, 0, 0, InputClassification.PerVertexData, 0),
-                                                        new InputElement("TEXCOORD", 0, SharpDX.DXGI.Format.R32G32_Float, 12, 0, InputClassification.PerVertexData, 0),
-                                                        new InputElement("COLOR", 0, SharpDX.DXGI.Format.R32G32B32A32_Float, 20, 0, InputClassification.PerVertexData, 0)
+                                                        new InputElement("POSITION", 0, Format.R32G32B32_Float, 0, 0, InputClassification.PerVertexData, 0),
+                                                        new InputElement("TEXCOORD", 0, Format.R32G32_Float, 12, 0, InputClassification.PerVertexData, 0),
+                                                        new InputElement("COLOR", 0, Format.R32G32B32A32_Float, 20, 0, InputClassification.PerVertexData, 0)
                                                     };
 
                         _inputLayout = ToDispose(new InputLayout(_device, pass.Description.Signature, layoutDesc));
                     }
                     // Create Vertex Buffer
-                    BufferDescription vbd = new BufferDescription
+                    var vbd = new BufferDescription
                     {
                         SizeInBytes = 2048 * Marshal.SizeOf(typeof(SpriteVertex)),
                         Usage = ResourceUsage.Dynamic,
@@ -144,11 +149,11 @@ technique11 SpriteTech {
                         StructureByteStride = 0
                     };
 
-                    _VB = ToDispose(new SharpDX.Direct3D11.Buffer(_device, vbd));
+                    _VB = ToDispose(new Buffer(_device, vbd));
 
                     // Create and initialise Index Buffer
 
-                    short[] indices = new short[3072];
+                    var indices = new short[3072];
 
                     for (ushort i = 0; i < 512; ++i)
                     {
@@ -163,7 +168,7 @@ technique11 SpriteTech {
                     _indexBuffer = ToDispose(new SafeHGlobal(indices.Length * Marshal.SizeOf(indices[0])));
                     Marshal.Copy(indices, 0, _indexBuffer.DangerousGetHandle(), indices.Length);
 
-                    BufferDescription ibd = new BufferDescription
+                    var ibd = new BufferDescription
                     {
                         SizeInBytes = 3072 * Marshal.SizeOf(typeof(short)),
                         Usage = ResourceUsage.Immutable,
@@ -173,12 +178,12 @@ technique11 SpriteTech {
                         StructureByteStride = 0
                     };
                     
-                    _IB = ToDispose(new SharpDX.Direct3D11.Buffer(_device, _indexBuffer.DangerousGetHandle(), ibd));
+                    _IB = ToDispose(new Buffer(_device, _indexBuffer.DangerousGetHandle(), ibd));
 
-                    BlendStateDescription transparentDesc = new BlendStateDescription()
+                    var transparentDesc = new BlendStateDescription
                     {
                         AlphaToCoverageEnable = false,
-                        IndependentBlendEnable = false,
+                        IndependentBlendEnable = false
                     };
                     transparentDesc.RenderTarget[0].IsBlendEnabled = true;
                     transparentDesc.RenderTarget[0].SourceBlend = BlendOption.SourceAlpha;
@@ -198,17 +203,17 @@ technique11 SpriteTech {
             return true;
         }
 
-        internal static Color4 ToColor4(System.Drawing.Color color)
+        internal static Color4 ToColor4(Color color)
         {
-            Vector4 Vec = new Vector4(color.R > 0 ? (float)(color.R / 255.0f) : 0.0f, color.G > 0 ? (float)(color.G / 255.0f) : 0.0f, color.B > 0 ? (float)(color.B / 255.0f) : 0.0f, color.A > 0 ? (float)(color.A / 255.0f) : 0.0f);
+            var Vec = new Vector4(color.R > 0 ? color.R / 255.0f : 0.0f, color.G > 0 ? color.G / 255.0f : 0.0f, color.B > 0 ? color.B / 255.0f : 0.0f, color.A > 0 ? color.A / 255.0f : 0.0f);
             return new Color4(Vec);
         }
 
-        public void DrawImage(int x, int y, float scale, float angle, System.Drawing.Color? color, DXImage image)
+        public void DrawImage(int x, int y, float scale, float angle, Color? color, DXImage image)
         {
             Debug.Assert(_initialized);
 
-            Color4 blendFactor = new Color4(1.0f);
+            var blendFactor = new Color4(1.0f);
             Color4 backupBlendFactor;
             int backupMask;
             using (var backupBlendState = _deviceContext.OutputMerger.GetBlendState(out backupBlendFactor, out backupMask))
@@ -224,9 +229,9 @@ technique11 SpriteTech {
             }
         }
 
-        public void DrawString(int X, int Y, string text, System.Drawing.Color color, DXFont F)
+        public void DrawString(int X, int Y, string text, Color color, DXFont F)
         {
-            Color4 blendFactor = new Color4(1.0f);
+            var blendFactor = new Color4(1.0f);
             Color4 backupBlendFactor;
             int backupMask;
             using (var backupBlendState = _deviceContext.OutputMerger.GetBlendState(out backupBlendFactor, out backupMask))
@@ -236,34 +241,38 @@ technique11 SpriteTech {
                 BeginBatch(F.GetFontSheetSRV());
 
 
-                int length = text.Length;
+                var length = text.Length;
 
-                int posX = X;
-                int posY = Y;
+                var posX = X;
+                var posY = Y;
 
-                Color4 color4 = ToColor4(color);
+                var color4 = ToColor4(color);
 
-                for (int i = 0; i < length; ++i)
+                for (var i = 0; i < length; ++i)
                 {
-                    char character = text[i];
+                    var character = text[i];
 
-                    if (character == ' ')
-                        posX += F.GetSpaceWidth();
-                    else if (character == '\n')
+                    switch (character)
                     {
-                        posX = X;
-                        posY += F.GetCharHeight();
-                    }
-                    else
-                    {
-                        Rectangle charRect = F.GetCharRect(character);
+                        case ' ':
+                            posX += F.GetSpaceWidth();
+                            break;
 
-                        int width = charRect.Right - charRect.Left;
-                        int height = charRect.Bottom - charRect.Top;
+                        case '\n':
+                            posX = X;
+                            posY += F.GetCharHeight();
+                            break;
 
-                        Draw(new Rectangle(posX, posY, width, height), charRect, color4);
+                        default:
+                            var charRect = F.GetCharRect(character);
 
-                        posX += width + 1;
+                            var width = charRect.Right - charRect.Left;
+                            var height = charRect.Bottom - charRect.Top;
+
+                            Draw(new Rectangle(posX, posY, width, height), charRect, color4);
+
+                            posX += width + 1;
+                            break;
                     }
                 }
 
@@ -278,10 +287,10 @@ technique11 SpriteTech {
 
             _batchTexSRV = texSRV;
 
-            Texture2D tex = _batchTexSRV.ResourceAs<Texture2D>();
+            var tex = _batchTexSRV.ResourceAs<Texture2D>();
             {
 
-                Texture2DDescription texDesc = tex.Description;
+                var texDesc = tex.Description;
                 _texWidth = texDesc.Width;
                 _texHeight = texDesc.Height;
             }
@@ -292,24 +301,24 @@ technique11 SpriteTech {
         {
             Debug.Assert(_initialized);
 
-            ViewportF[] vp = _deviceContext.Rasterizer.GetViewports();
+            var vp = _deviceContext.Rasterizer.GetViewports();
 
             _screenWidth = vp[0].Width;
             _screenHeight = vp[0].Height;
 
-            int stride = Marshal.SizeOf(typeof(SpriteVertex));
-            int offset = 0;
+            var stride = Marshal.SizeOf(typeof(SpriteVertex));
+            var offset = 0;
             _deviceContext.InputAssembler.InputLayout = _inputLayout;
-            _deviceContext.InputAssembler.SetIndexBuffer(_IB, SharpDX.DXGI.Format.R16_UInt, 0);
+            _deviceContext.InputAssembler.SetIndexBuffer(_IB, Format.R16_UInt, 0);
             _deviceContext.InputAssembler.SetVertexBuffers(0, new[] { _VB }, new[] { stride }, new[] { offset });
-            _deviceContext.InputAssembler.PrimitiveTopology = SharpDX.Direct3D.PrimitiveTopology.TriangleList;
+            _deviceContext.InputAssembler.PrimitiveTopology = PrimitiveTopology.TriangleList;
             _spriteMap.SetResource(_batchTexSRV);
 
-            using (EffectPass pass = _spriteTech.GetPassByIndex(0))
+            using (var pass = _spriteTech.GetPassByIndex(0))
             {
                 pass.Apply(_deviceContext);
                 var spritesToDraw = _spriteList.Count;
-                int startIndex = 0;
+                var startIndex = 0;
                 while (spritesToDraw > 0)
                 {
                     if (spritesToDraw <= 512)
@@ -330,7 +339,7 @@ technique11 SpriteTech {
 
         public void Draw(Rectangle destinationRect, Rectangle sourceRect, Color4 color, float scale = 1.0f, float angle = 0f, float z = 0f)
         {
-            Sprite sprite = new Sprite(
+            var sprite = new Sprite(
                 sourceRect,
                 destinationRect,
                 color
@@ -346,18 +355,18 @@ technique11 SpriteTech {
 
         void DrawBatch(int startSpriteIndex, int spriteCount)
         {
-            DataBox mappedData = _deviceContext.MapSubresource(_VB, 0, MapMode.WriteDiscard, MapFlags.None);
+            var mappedData = _deviceContext.MapSubresource(_VB, 0, MapMode.WriteDiscard, MapFlags.None);
 
             // Update the vertices
             unsafe
             {
-                SpriteVertex* v = (SpriteVertex*)mappedData.DataPointer.ToPointer();
+                var v = (SpriteVertex*)mappedData.DataPointer.ToPointer();
 
-                for (int i = 0; i < spriteCount; ++i)
+                for (var i = 0; i < spriteCount; ++i)
                 {
-                    Sprite sprite = _spriteList[startSpriteIndex + i];
+                    var sprite = _spriteList[startSpriteIndex + i];
 
-                    SpriteVertex[] quad = new SpriteVertex[4];
+                    var quad = new SpriteVertex[4];
 
                     BuildSpriteQuad(sprite, ref quad);
 
@@ -377,8 +386,8 @@ technique11 SpriteTech {
         {
             Vector3 p;
 
-            p.X = 2.0f * (float)x / _screenWidth - 1.0f;
-            p.Y = 1.0f - 2.0f * (float)y / _screenHeight;
+            p.X = 2.0f * x / _screenWidth - 1.0f;
+            p.Y = 1.0f - 2.0f * y / _screenHeight;
             p.Z = z;
 
             return p;
@@ -387,10 +396,10 @@ technique11 SpriteTech {
         void BuildSpriteQuad(Sprite sprite, ref SpriteVertex[] v)
         {
             if (v.Length < 4)
-                throw new ArgumentException("must have 4 sprite vertices", "v");
+                throw new ArgumentException("must have 4 sprite vertices", nameof(v));
 
-            Rectangle dest = sprite.DestRect;
-            Rectangle src = sprite.SrcRect;
+            var dest = sprite.DestRect;
+            var src = sprite.SrcRect;
 
             v[0].Pos = PointToNdc(dest.Left, dest.Bottom, sprite.Z);
             v[1].Pos = PointToNdc(dest.Left, dest.Top, sprite.Z);
@@ -407,17 +416,17 @@ technique11 SpriteTech {
             v[2].Color = sprite.Color;
             v[3].Color = sprite.Color;
 
-            float tx = 0.5f * (v[0].Pos.X + v[3].Pos.X);
-            float ty = 0.5f * (v[0].Pos.Y + v[1].Pos.Y);
+            var tx = 0.5f * (v[0].Pos.X + v[3].Pos.X);
+            var ty = 0.5f * (v[0].Pos.Y + v[1].Pos.Y);
 
-            Vector2 origin = new Vector2(tx, ty);
-            Vector2 translation = new Vector2(0.0f, 0.0f);
+            var origin = new Vector2(tx, ty);
+            var translation = new Vector2(0.0f, 0.0f);
 
-            Matrix T = Matrix.AffineTransformation2D(sprite.Scale, origin, sprite.Angle, translation);
+            var T = Matrix.AffineTransformation2D(sprite.Scale, origin, sprite.Angle, translation);
 
-            for (int i = 0; i < 4; ++i)
+            for (var i = 0; i < 4; ++i)
             {
-                Vector3 p = v[i].Pos;
+                var p = v[i].Pos;
                 p = Vector3.TransformCoordinate(p, T);
                 v[i].Pos = p;
             }
