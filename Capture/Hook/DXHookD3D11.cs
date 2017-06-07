@@ -481,14 +481,14 @@ namespace Capture.Hook
                                     finally
                                     {
                                         this.DebugMessage("PresentHook: Copy to System Memory time: " + (DateTime.Now - startCopyToSystemMemory).ToString());
-                                    }
-
-                                    if (_finalRTMapped)
-                                    {
-                                        lock (_lock)
+                                        
+                                        if (_finalRTMapped)
                                         {
-                                            _finalRT.Device.ImmediateContext.UnmapSubresource(_finalRT, 0);
-                                            _finalRTMapped = false;
+                                            lock (_lock)
+                                            {
+                                                _finalRT.Device.ImmediateContext.UnmapSubresource(_finalRT, 0);
+                                                _finalRTMapped = false;
+                                            }
                                         }
                                     }
                                 }
