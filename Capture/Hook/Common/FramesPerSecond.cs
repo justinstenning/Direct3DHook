@@ -5,6 +5,7 @@ using System.Text;
 
 namespace Capture.Hook.Common
 {
+    [Serializable]
     public class FramesPerSecond: TextElement
     {
         string _fpsFormat = "{0:N0} fps";

@@ -11,6 +11,7 @@ using System.Threading;
 using System.IO;
 using Capture.Interface;
 using SharpDX.Direct3D;
+using Capture.Hook.Common;
 
 namespace Capture.Hook
 {
@@ -508,30 +509,26 @@ namespace Capture.Hook
                 #endregion
 
                 #region Draw overlay (after screenshot so we don't capture overlay as well)
-                if (this.Config.ShowOverlay)
+                var displayOverlays = Overlays;
+                if (this.Config.ShowOverlay && displayOverlays != null)
                 {
                     // Initialise Overlay Engine
-                    if (_swapChainPointer != swapChain.NativePointer || _overlayEngine == null)
+                    if (_swapChainPointer != swapChain.NativePointer || _overlayEngine == null
+                        || IsOverlayUpdatePending)
                     {
                         if (_overlayEngine != null)
                             _overlayEngine.Dispose();
 
                         _overlayEngine = new DX11.DXOverlayEngine();
-                        _overlayEngine.Overlays.Add(new Capture.Hook.Common.Overlay
-                        {
-                            Elements =
-                            {
-                                //new Capture.Hook.Common.TextElement(new System.Drawing.Font("Times New Roman", 22)) { Text = "Test", Location = new System.Drawing.Point(200, 200), Color = System.Drawing.Color.Yellow, AntiAliased = false},
-                                new Capture.Hook.Common.FramesPerSecond(new System.Drawing.Font("Arial", 16)) { Location = new System.Drawing.Point(5,5), Color = System.Drawing.Color.Red, AntiAliased = true },
-                                //new Capture.Hook.Common.ImageElement(@"C:\Temp\test.bmp") { Location = new System.Drawing.Point(20, 20) }
-                            }
-                        });
+                        _overlayEngine.Overlays.AddRange((IEnumerable<IOverlay>)displayOverlays);
                         _overlayEngine.Initialise(swapChain);
 
                         _swapChainPointer = swapChain.NativePointer;
+
+                        IsOverlayUpdatePending = false;
                     }
                     // Draw Overlay(s)
-                    else if (_overlayEngine != null)
+                    if (_overlayEngine != null)
                     {
                         foreach (var overlay in _overlayEngine.Overlays)
                             overlay.Frame();

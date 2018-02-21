@@ -38,7 +38,8 @@ namespace Capture.Hook.DX11
 
         private void EnsureInitiliased()
         {
-            Debug.Assert(_initialised);
+            if (!_initialised)
+                throw new InvalidOperationException("DXOverlayEngine must be initialised.");
         }
 
         public bool Initialise(SharpDX.DXGI.SwapChain swapChain)
@@ -48,7 +49,6 @@ namespace Capture.Hook.DX11
 
         public bool Initialise(Device device, Texture2D renderTarget)
         {
-            Debug.Assert(!_initialised);
             if (_initialising)
                 return false;
 
@@ -82,7 +82,7 @@ namespace Capture.Hook.DX11
                     return false;
 
                 // Initialise any resources required for overlay elements
-                IntialiseElementResources();
+                InitialiseElementResources();
 
                 _initialised = true;
                 return true;
@@ -93,7 +93,7 @@ namespace Capture.Hook.DX11
             }
         }
 
-        private void IntialiseElementResources()
+        void InitialiseElementResources()
         {
             foreach (var overlay in Overlays)
             {
@@ -135,6 +135,9 @@ namespace Capture.Hook.DX11
 
             foreach (var overlay in Overlays)
             {
+                if (overlay.Hidden)
+                    continue;
+
                 foreach (var element in overlay.Elements)
                 {
                     if (element.Hidden)
@@ -175,7 +178,7 @@ namespace Capture.Hook.DX11
         {
             DXFont result = null;
 
-            string fontKey = String.Format("{0}{1}{2}", element.Font.Name, element.Font.Size, element.Font.Style, element.AntiAliased);
+            string fontKey = String.Format("{0}{1}{2}{3}", element.Font.Name, element.Font.Size, element.Font.Style, element.AntiAliased);
 
             if (!_fontCache.TryGetValue(fontKey, out result))
             {

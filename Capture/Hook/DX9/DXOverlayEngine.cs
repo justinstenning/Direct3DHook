@@ -4,6 +4,7 @@ using SharpDX.Direct3D9;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -114,9 +115,17 @@ namespace Capture.Hook.DX9
                     }
                     else if (imageElement != null)
                     {
+                        //Apply the scaling of the imageElement
+                        var rotation = Matrix.RotationZ(imageElement.Angle);
+                        var scaling = Matrix.Scaling(imageElement.Scale);
+                        _sprite.Transform = rotation * scaling;
+
                         Texture image = GetImageForImageElement(imageElement);
                         if (image != null)
                             _sprite.Draw(image, new SharpDX.ColorBGRA(imageElement.Tint.R, imageElement.Tint.G, imageElement.Tint.B, imageElement.Tint.A), null, null, new Vector3(imageElement.Location.X, imageElement.Location.Y, 0));
+
+                        //Reset the transform for other elements
+                        _sprite.Transform = Matrix.Identity;
                     }
                 }
             }
@@ -149,7 +158,7 @@ namespace Capture.Hook.DX9
         {
             Font result = null;
 
-            string fontKey = String.Format("{0}{1}{2}", element.Font.Name, element.Font.Size, element.Font.Style, element.AntiAliased);
+            string fontKey = String.Format("{0}{1}{2}{3}", element.Font.Name, element.Font.Size, element.Font.Style, element.AntiAliased);
 
             if (!_fontCache.TryGetValue(fontKey, out result))
             {
@@ -177,6 +186,17 @@ namespace Capture.Hook.DX9
 
                     _imageCache[element] = result;
                 }
+            }
+            else if (!_imageCache.TryGetValue(element, out result) && element.Bitmap != null)
+            {
+                using (var ms = new MemoryStream())
+                {
+                    element.Bitmap.Save(ms, System.Drawing.Imaging.ImageFormat.Png);
+                    ms.Seek(0, SeekOrigin.Begin);
+                    result = ToDispose(Texture.FromStream(Device, ms));
+                }
+
+                _imageCache[element] = result;
             }
             return result;
         }

@@ -5,6 +5,7 @@ using System.Text;
 
 namespace Capture.Hook.Common
 {
+    [Serializable]
     public class Overlay: IOverlay
     {
         List<IOverlayElement> _elements = new List<IOverlayElement>();

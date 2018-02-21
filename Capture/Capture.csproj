@@ -112,6 +112,7 @@
     <Compile Include="Hook\Hook.cs" />
     <Compile Include="Hook\HookManager.cs" />
     <Compile Include="Hook\TextDisplay.cs" />
+    <Compile Include="Interface\DrawOverlayEventArgs.cs" />
     <Compile Include="Interface\ScreenshotExtensions.cs" />
     <Compile Include="Interface\CaptureConfig.cs" />
     <Compile Include="EntryPoint.cs" />

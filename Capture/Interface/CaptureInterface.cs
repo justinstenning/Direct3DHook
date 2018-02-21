@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Drawing;
 using System.Threading;
+using Capture.Hook.Common;
 
 namespace Capture.Interface
 {
@@ -21,6 +22,8 @@ namespace Capture.Interface
     public delegate void ScreenshotRequestedEvent(ScreenshotRequest request);
     [Serializable]
     public delegate void DisplayTextEvent(DisplayTextEventArgs args);
+    [Serializable]
+    public delegate void DrawOverlayEvent(DrawOverlayEventArgs args);
 
     [Serializable]
     public class CaptureInterface : MarshalByRefObject
@@ -73,6 +76,11 @@ namespace Capture.Interface
         /// </summary>
         public event DisplayTextEvent DisplayText;
         
+        /// <summary>
+        ///     Client event used to (re-)draw an overlay in-game.
+        /// </summary>
+        public event DrawOverlayEvent DrawOverlay;
+
         #endregion
 
         #endregion
@@ -237,6 +245,20 @@ namespace Capture.Interface
             if (duration.TotalMilliseconds <= 0)
                 throw new ArgumentException("Duration must be larger than 0", "duration");
             SafeInvokeDisplayText(new DisplayTextEventArgs(text, duration));
+        }
+
+        /// <summary>
+        /// Replace the in-game overlay with the one provided.
+        /// 
+        /// Note: this is not designed for fast updates (i.e. only a couple of times per second)
+        /// </summary>
+        /// <param name="overlay"></param>
+        public void DrawOverlayInGame(IOverlay overlay)
+        {
+            SafeInvokeDrawOverlay(new DrawOverlayEventArgs()
+            {
+                Overlay = overlay
+            });
         }
 
         #endregion
@@ -411,14 +433,38 @@ namespace Capture.Interface
             }
         }
 
+        private void SafeInvokeDrawOverlay(DrawOverlayEventArgs drawOverlayEventArgs)
+        {
+            if (DrawOverlay == null)
+                return; //No Listeners
+
+            DrawOverlayEvent listener = null;
+            var dels = DrawOverlay.GetInvocationList();
+
+            foreach (var del in dels)
+            {
+                try
+                {
+                    listener = (DrawOverlayEvent)del;
+                    listener.Invoke(drawOverlayEventArgs);
+                }
+                catch (Exception)
+                {
+                    //Could not reach the destination, so remove it
+                    //from the list
+                    DrawOverlay -= listener;
+                }
+            }
+        }
+
         #endregion
 
         /// <summary>
-        /// Used 
+        /// Used to confirm connection to IPC server channel
         /// </summary>
-        public void Ping()
+        public DateTime Ping()
         {
-            
+            return DateTime.Now;
         }
     }
 
@@ -454,6 +500,11 @@ namespace Capture.Interface
         /// Client event used to display in-game text
         /// </summary>
         public event DisplayTextEvent DisplayText;
+
+        /// <summary>
+        ///     Client event used to (re-)draw an overlay in-game.
+        /// </summary>
+        public event DrawOverlayEvent DrawOverlay;
 
         #endregion
 
@@ -497,6 +548,12 @@ namespace Capture.Interface
         {
             if (DisplayText != null)
                 DisplayText(args);
+        }
+        
+        public void DrawOverlayProxyHandler(DrawOverlayEventArgs args)
+        {
+            if (DrawOverlay != null)
+                DrawOverlay(args);
         }
     }
 }

@@ -27,9 +27,12 @@ namespace Capture.Hook
 
             Interface.ScreenshotRequested += InterfaceEventProxy.ScreenshotRequestedProxyHandler;
             Interface.DisplayText += InterfaceEventProxy.DisplayTextProxyHandler;
+            Interface.DrawOverlay += InterfaceEventProxy.DrawOverlayProxyHandler;
             InterfaceEventProxy.ScreenshotRequested += new ScreenshotRequestedEvent(InterfaceEventProxy_ScreenshotRequested);
             InterfaceEventProxy.DisplayText += new DisplayTextEvent(InterfaceEventProxy_DisplayText);
+            InterfaceEventProxy.DrawOverlay += InterfaceEventProxy_DrawOverlay;
         }
+
         ~BaseDXHook()
         {
             Dispose(false);
@@ -50,6 +53,14 @@ namespace Capture.Hook
             this.Request = request;
         }
 
+        private void InterfaceEventProxy_DrawOverlay(DrawOverlayEventArgs args)
+        {
+            Overlays = new List<Common.IOverlay>();
+            if (args.Overlay != null)
+                Overlays.Add(args.Overlay);
+            IsOverlayUpdatePending = true;
+        }
+
         protected Stopwatch Timer { get; set; }
 
         /// <summary>
@@ -58,6 +69,10 @@ namespace Capture.Hook
         protected FramesPerSecond FPS { get; set; }
 
         protected TextDisplay TextDisplay { get; set; }
+
+        protected List<Common.IOverlay> Overlays { get; set; }
+ 
+        protected bool IsOverlayUpdatePending { get; set; }
 
         int _processId = 0;
         protected int ProcessId
@@ -394,6 +409,7 @@ namespace Capture.Hook
                         // Remove the event handlers
                         Interface.ScreenshotRequested -= InterfaceEventProxy.ScreenshotRequestedProxyHandler;
                         Interface.DisplayText -= InterfaceEventProxy.DisplayTextProxyHandler;
+                        Interface.DrawOverlay -= InterfaceEventProxy_DrawOverlay;
                     }
                     catch (RemotingException) { } // Ignore remoting exceptions (host process may have been closed)
                 }

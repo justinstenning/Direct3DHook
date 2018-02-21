@@ -258,5 +258,22 @@ namespace TestScreenshot
             {
             }
         }
+
+        private void btnDisplayOverlay_Click(object sender, EventArgs e)
+        {
+            _captureProcess.CaptureInterface.DrawOverlayInGame(new Capture.Hook.Common.Overlay
+            {
+                Elements = new List<Capture.Hook.Common.IOverlayElement>
+                {
+                    new Capture.Hook.Common.FramesPerSecond(new System.Drawing.Font("Arial", 16, FontStyle.Bold)) {
+                            Location = new Point(25, 25),
+                            Color = Color.Red,
+                            AntiAliased = true,
+                            Text = "{0:N0} fps"
+                        },
+                },
+                Hidden = !cbDrawOverlay.Checked
+            });
+        }
     }
 }

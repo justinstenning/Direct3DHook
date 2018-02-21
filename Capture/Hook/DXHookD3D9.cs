@@ -10,6 +10,7 @@ using System.Threading;
 using System.Drawing;
 using Capture.Interface;
 using SharpDX.Direct3D9;
+using Capture.Hook.Common;
 
 namespace Capture.Hook
 {
@@ -377,34 +378,26 @@ namespace Capture.Hook
 
                 #endregion
 
-                if (this.Config.ShowOverlay)
+                var displayOverlays = Overlays;
+                if (this.Config.ShowOverlay && displayOverlays != null)
                 {
                     #region Draw Overlay
 
                     // Check if overlay needs to be initialised
-                    if (_overlayEngine == null || _overlayEngine.Device.NativePointer != device.NativePointer)
+                    if (_overlayEngine == null || _overlayEngine.Device.NativePointer != device.NativePointer
+                        || IsOverlayUpdatePending)
                     {
                         // Cleanup if necessary
                         if (_overlayEngine != null)
                             RemoveAndDispose(ref _overlayEngine);
 
                         _overlayEngine = ToDispose(new DX9.DXOverlayEngine());
-                        // Create Overlay
-                        _overlayEngine.Overlays.Add(new Capture.Hook.Common.Overlay
-                        {
-                            Elements =
-                            {
-                                // Add frame rate
-                                new Capture.Hook.Common.FramesPerSecond(new System.Drawing.Font("Arial", 16, FontStyle.Bold)) { Location = new System.Drawing.Point(5,5), Color = System.Drawing.Color.Red, AntiAliased = true },
-                                // Example of adding an image to overlay (can implement semi transparency with Tint, e.g. Ting = Color.FromArgb(127, 255, 255, 255))
-                                //new Capture.Hook.Common.ImageElement(@"C:\Temp\test.bmp") { Location = new System.Drawing.Point(20, 20) }
-                            }
-                        });
-
+                        _overlayEngine.Overlays.AddRange((IEnumerable<IOverlay>)displayOverlays);
                         _overlayEngine.Initialise(device);
+                        IsOverlayUpdatePending = false;
                     }
                     // Draw Overlay(s)
-                    else if (_overlayEngine != null)
+                    if (_overlayEngine != null)
                     {
                         foreach (var overlay in _overlayEngine.Overlays)
                             overlay.Frame();
