@@ -437,9 +437,9 @@ namespace Capture.Hook
 
                                 _finalRT.Device.ImmediateContext.End(_query);
                                 _queryIssued = true;
-                                while (!_finalRT.Device.ImmediateContext.GetData(_query).ReadBoolean())
+                                while (_finalRT.Device.ImmediateContext.GetData(_query).ReadByte() != 1)
                                 {
-                                    // Spin (usually no spin takes place)
+                                    // Spin (usually only one cycle or no spin takes place)
                                 }
 
                                 DateTime startCopyToSystemMemory = DateTime.Now;
@@ -460,13 +460,9 @@ namespace Capture.Hook
                                             switch (_requestCopy.Format)
                                             {
                                                 case ImageFormat.Bitmap:
-                                                    Texture2D.ToStream(_finalRT.Device.ImmediateContext, _finalRT, ImageFileFormat.Bmp, ms);
-                                                    break;
                                                 case ImageFormat.Jpeg:
-                                                    Texture2D.ToStream(_finalRT.Device.ImmediateContext, _finalRT, ImageFileFormat.Jpg, ms);
-                                                    break;
                                                 case ImageFormat.Png:
-                                                    Texture2D.ToStream(_finalRT.Device.ImmediateContext, _finalRT, ImageFileFormat.Png, ms);
+                                                    ToStream(_finalRT.Device.ImmediateContext, _finalRT, _requestCopy.Format, ms);
                                                     break;
                                                 case ImageFormat.PixelData:
                                                     if (db.DataPointer != IntPtr.Zero)
@@ -552,6 +548,228 @@ namespace Capture.Hook
         Capture.Hook.DX11.DXOverlayEngine _overlayEngine;
 
         IntPtr _swapChainPointer = IntPtr.Zero;
-        
+
+        SharpDX.WIC.ImagingFactory2 wicFactory;
+
+        /// <summary>
+        /// Copies to a stream using WIC. The format is converted if necessary.
+        /// </summary>
+        /// <param name="context"></param>
+        /// <param name="texture"></param>
+        /// <param name="outputFormat"></param>
+        /// <param name="stream"></param>
+        public void ToStream(SharpDX.Direct3D11.DeviceContext context, Texture2D texture, ImageFormat outputFormat, Stream stream)
+        {
+            if (wicFactory == null)
+                wicFactory = ToDispose(new SharpDX.WIC.ImagingFactory2());
+
+            DataStream dataStream;
+            var dataBox = context.MapSubresource(
+                texture,
+                0,
+                0,
+                MapMode.Read,
+                SharpDX.Direct3D11.MapFlags.None,
+                out dataStream);
+            try
+            {
+                var dataRectangle = new DataRectangle
+                {
+                    DataPointer = dataStream.DataPointer,
+                    Pitch = dataBox.RowPitch
+                };
+
+                var format = PixelFormatFromFormat(texture.Description.Format);
+
+                if (format == Guid.Empty)
+                    return;
+
+                using (var bitmap = new SharpDX.WIC.Bitmap(
+                    wicFactory,
+                    texture.Description.Width,
+                    texture.Description.Height,
+                    format,
+                    dataRectangle))
+                {
+                    stream.Position = 0;
+
+                    SharpDX.WIC.BitmapEncoder bitmapEncoder = null;
+                    switch (outputFormat)
+                    {
+                        case ImageFormat.Bitmap:
+                            bitmapEncoder = new SharpDX.WIC.BmpBitmapEncoder(wicFactory, stream);
+                            break;
+                        case ImageFormat.Jpeg:
+                            bitmapEncoder = new SharpDX.WIC.JpegBitmapEncoder(wicFactory, stream);
+                            break;
+                        case ImageFormat.Png:
+                            bitmapEncoder = new SharpDX.WIC.PngBitmapEncoder(wicFactory, stream);
+                            break;
+                        default:
+                            return;
+                    }
+
+                    try
+                    {
+                        using (var bitmapFrameEncode = new SharpDX.WIC.BitmapFrameEncode(bitmapEncoder))
+                        {
+                            bitmapFrameEncode.Initialize();
+                            bitmapFrameEncode.SetSize(bitmap.Size.Width, bitmap.Size.Height);
+                            var pixelFormat = format;
+                            bitmapFrameEncode.SetPixelFormat(ref pixelFormat);
+
+                            if (pixelFormat != format)
+                            {
+                                // IWICFormatConverter
+                                var converter = new SharpDX.WIC.FormatConverter(wicFactory);
+                                if (converter.CanConvert(format, pixelFormat))
+                                {
+                                    converter.Initialize(bitmap, SharpDX.WIC.PixelFormat.Format24bppBGR, SharpDX.WIC.BitmapDitherType.None, null, 0, SharpDX.WIC.BitmapPaletteType.MedianCut);
+                                    bitmapFrameEncode.SetPixelFormat(ref pixelFormat);
+                                    bitmapFrameEncode.WriteSource(converter);
+                                }
+                                else
+                                {
+                                    this.DebugMessage(string.Format("Unable to convert Direct3D texture format {0} to a suitable WIC format", texture.Description.Format.ToString()));
+                                    return;
+                                }
+                            }
+                            else
+                            {
+                                bitmapFrameEncode.WriteSource(bitmap);
+                            }
+                            bitmapFrameEncode.Commit();
+                            bitmapEncoder.Commit();
+                        }
+                    }
+                    finally
+                    {
+                        bitmapEncoder.Dispose();
+                    }
+                }
+            }
+            finally
+            {
+                context.UnmapSubresource(texture, 0);
+            }
+        }
+
+
+        public static Guid PixelFormatFromFormat(SharpDX.DXGI.Format format)
+        {
+            switch (format)
+            {
+                case SharpDX.DXGI.Format.R32G32B32A32_Typeless:
+                case SharpDX.DXGI.Format.R32G32B32A32_Float:
+                    return SharpDX.WIC.PixelFormat.Format128bppRGBAFloat;
+                case SharpDX.DXGI.Format.R32G32B32A32_UInt:
+                case SharpDX.DXGI.Format.R32G32B32A32_SInt:
+                    return SharpDX.WIC.PixelFormat.Format128bppRGBAFixedPoint;
+                case SharpDX.DXGI.Format.R32G32B32_Typeless:
+                case SharpDX.DXGI.Format.R32G32B32_Float:
+                    return SharpDX.WIC.PixelFormat.Format96bppRGBFloat;
+                case SharpDX.DXGI.Format.R32G32B32_UInt:
+                case SharpDX.DXGI.Format.R32G32B32_SInt:
+                    return SharpDX.WIC.PixelFormat.Format96bppRGBFixedPoint;
+                case SharpDX.DXGI.Format.R16G16B16A16_Typeless:
+                case SharpDX.DXGI.Format.R16G16B16A16_Float:
+                case SharpDX.DXGI.Format.R16G16B16A16_UNorm:
+                case SharpDX.DXGI.Format.R16G16B16A16_UInt:
+                case SharpDX.DXGI.Format.R16G16B16A16_SNorm:
+                case SharpDX.DXGI.Format.R16G16B16A16_SInt:
+                    return SharpDX.WIC.PixelFormat.Format64bppRGBA;
+                case SharpDX.DXGI.Format.R32G32_Typeless:
+                case SharpDX.DXGI.Format.R32G32_Float:
+                case SharpDX.DXGI.Format.R32G32_UInt:
+                case SharpDX.DXGI.Format.R32G32_SInt:
+                case SharpDX.DXGI.Format.R32G8X24_Typeless:
+                case SharpDX.DXGI.Format.D32_Float_S8X24_UInt:
+                case SharpDX.DXGI.Format.R32_Float_X8X24_Typeless:
+                case SharpDX.DXGI.Format.X32_Typeless_G8X24_UInt:
+                    return Guid.Empty;
+                case SharpDX.DXGI.Format.R10G10B10A2_Typeless:
+                case SharpDX.DXGI.Format.R10G10B10A2_UNorm:
+                case SharpDX.DXGI.Format.R10G10B10A2_UInt:
+                    return SharpDX.WIC.PixelFormat.Format32bppRGBA1010102;
+                case SharpDX.DXGI.Format.R11G11B10_Float:
+                    return Guid.Empty;
+                case SharpDX.DXGI.Format.R8G8B8A8_Typeless:
+                case SharpDX.DXGI.Format.R8G8B8A8_UNorm:
+                case SharpDX.DXGI.Format.R8G8B8A8_UNorm_SRgb:
+                case SharpDX.DXGI.Format.R8G8B8A8_UInt:
+                case SharpDX.DXGI.Format.R8G8B8A8_SNorm:
+                case SharpDX.DXGI.Format.R8G8B8A8_SInt:
+                    return SharpDX.WIC.PixelFormat.Format32bppRGBA;
+                case SharpDX.DXGI.Format.R16G16_Typeless:
+                case SharpDX.DXGI.Format.R16G16_Float:
+                case SharpDX.DXGI.Format.R16G16_UNorm:
+                case SharpDX.DXGI.Format.R16G16_UInt:
+                case SharpDX.DXGI.Format.R16G16_SNorm:
+                case SharpDX.DXGI.Format.R16G16_SInt:
+                    return Guid.Empty;
+                case SharpDX.DXGI.Format.R32_Typeless:
+                case SharpDX.DXGI.Format.D32_Float:
+                case SharpDX.DXGI.Format.R32_Float:
+                case SharpDX.DXGI.Format.R32_UInt:
+                case SharpDX.DXGI.Format.R32_SInt:
+                    return Guid.Empty;
+                case SharpDX.DXGI.Format.R24G8_Typeless:
+                case SharpDX.DXGI.Format.D24_UNorm_S8_UInt:
+                case SharpDX.DXGI.Format.R24_UNorm_X8_Typeless:
+                    return SharpDX.WIC.PixelFormat.Format32bppGrayFloat;
+                case SharpDX.DXGI.Format.X24_Typeless_G8_UInt:
+                case SharpDX.DXGI.Format.R9G9B9E5_Sharedexp:
+                case SharpDX.DXGI.Format.R8G8_B8G8_UNorm:
+                case SharpDX.DXGI.Format.G8R8_G8B8_UNorm:
+                    return Guid.Empty;
+                case SharpDX.DXGI.Format.B8G8R8A8_UNorm:
+                case SharpDX.DXGI.Format.B8G8R8X8_UNorm:
+                    return SharpDX.WIC.PixelFormat.Format32bppBGRA;
+                case SharpDX.DXGI.Format.R10G10B10_Xr_Bias_A2_UNorm:
+                    return SharpDX.WIC.PixelFormat.Format32bppBGR101010;
+                case SharpDX.DXGI.Format.B8G8R8A8_Typeless:
+                case SharpDX.DXGI.Format.B8G8R8A8_UNorm_SRgb:
+                case SharpDX.DXGI.Format.B8G8R8X8_Typeless:
+                case SharpDX.DXGI.Format.B8G8R8X8_UNorm_SRgb:
+                    return SharpDX.WIC.PixelFormat.Format32bppBGRA;
+                case SharpDX.DXGI.Format.R8G8_Typeless:
+                case SharpDX.DXGI.Format.R8G8_UNorm:
+                case SharpDX.DXGI.Format.R8G8_UInt:
+                case SharpDX.DXGI.Format.R8G8_SNorm:
+                case SharpDX.DXGI.Format.R8G8_SInt:
+                    return Guid.Empty;
+                case SharpDX.DXGI.Format.R16_Typeless:
+                case SharpDX.DXGI.Format.R16_Float:
+                case SharpDX.DXGI.Format.D16_UNorm:
+                case SharpDX.DXGI.Format.R16_UNorm:
+                case SharpDX.DXGI.Format.R16_SNorm:
+                    return SharpDX.WIC.PixelFormat.Format16bppGrayHalf;
+                case SharpDX.DXGI.Format.R16_UInt:
+                case SharpDX.DXGI.Format.R16_SInt:
+                    return SharpDX.WIC.PixelFormat.Format16bppGrayFixedPoint;
+                case SharpDX.DXGI.Format.B5G6R5_UNorm:
+                    return SharpDX.WIC.PixelFormat.Format16bppBGR565;
+                case SharpDX.DXGI.Format.B5G5R5A1_UNorm:
+                    return SharpDX.WIC.PixelFormat.Format16bppBGRA5551;
+                case SharpDX.DXGI.Format.B4G4R4A4_UNorm:
+                    return Guid.Empty;
+
+                case SharpDX.DXGI.Format.R8_Typeless:
+                case SharpDX.DXGI.Format.R8_UNorm:
+                case SharpDX.DXGI.Format.R8_UInt:
+                case SharpDX.DXGI.Format.R8_SNorm:
+                case SharpDX.DXGI.Format.R8_SInt:
+                    return SharpDX.WIC.PixelFormat.Format8bppGray;
+                case SharpDX.DXGI.Format.A8_UNorm:
+                    return SharpDX.WIC.PixelFormat.Format8bppAlpha;
+                case SharpDX.DXGI.Format.R1_UNorm:
+                    return SharpDX.WIC.PixelFormat.Format1bppIndexed;
+
+                default:
+                    return Guid.Empty;
+            }
+        }
     }
+
+
 }

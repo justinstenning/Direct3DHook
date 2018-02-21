@@ -209,7 +209,7 @@ technique11 SpriteTech {
             Debug.Assert(_initialized);
 
             Color4 blendFactor = new Color4(1.0f);
-            Color4 backupBlendFactor;
+            SharpDX.Mathematics.Interop.RawColor4 backupBlendFactor;
             int backupMask;
             using (var backupBlendState = _deviceContext.OutputMerger.GetBlendState(out backupBlendFactor, out backupMask))
             {
@@ -227,7 +227,7 @@ technique11 SpriteTech {
         public void DrawString(int X, int Y, string text, System.Drawing.Color color, DXFont F)
         {
             Color4 blendFactor = new Color4(1.0f);
-            Color4 backupBlendFactor;
+            SharpDX.Mathematics.Interop.RawColor4 backupBlendFactor;
             int backupMask;
             using (var backupBlendState = _deviceContext.OutputMerger.GetBlendState(out backupBlendFactor, out backupMask))
             {
@@ -292,7 +292,7 @@ technique11 SpriteTech {
         {
             Debug.Assert(_initialized);
 
-            ViewportF[] vp = _deviceContext.Rasterizer.GetViewports();
+            ViewportF[] vp = _deviceContext.Rasterizer.GetViewports<ViewportF>();
 
             _screenWidth = vp[0].Width;
             _screenHeight = vp[0].Height;

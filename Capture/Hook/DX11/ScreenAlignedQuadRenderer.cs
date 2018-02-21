@@ -255,9 +255,9 @@ float4 PSMain(PixelIn input) : SV_Target
             //using (var oldRenderTarget = context.OutputMerger.GetRenderTargets(1).FirstOrDefault())
             {
                 context.ClearRenderTargetView(RenderTargetView, Color.CornflowerBlue);
-                
+
                 // Set sampler
-                ViewportF[] viewportf = { new ViewportF(0, 0, RenderTarget.Description.Width, RenderTarget.Description.Height, 0, 1) };
+                SharpDX.Mathematics.Interop.RawViewportF[] viewportf = { new ViewportF(0, 0, RenderTarget.Description.Width, RenderTarget.Description.Height, 0, 1) };
                 context.Rasterizer.SetViewports(viewportf);
                 context.PixelShader.SetSampler(0, (UseLinearSampling ? linearSampleState : pointSamplerState));
 

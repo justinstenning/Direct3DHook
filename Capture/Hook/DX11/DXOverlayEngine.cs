@@ -118,7 +118,7 @@ namespace Capture.Hook.DX11
         {
             //if (!DeferredContext)
             //{
-                ViewportF[] viewportf = { new ViewportF(0, 0, _renderTarget.Description.Width, _renderTarget.Description.Height, 0, 1) };
+                SharpDX.Mathematics.Interop.RawViewportF[] viewportf = { new ViewportF(0, 0, _renderTarget.Description.Width, _renderTarget.Description.Height, 0, 1) };
                 _deviceContext.Rasterizer.SetViewports(viewportf);
                 _deviceContext.OutputMerger.SetTargets(_renderTargetView);
             //}

@@ -161,7 +161,7 @@ namespace Capture.Hook
                 _d3d10VTblAddresses = new List<IntPtr>();
                 _dxgiSwapChainVTblAddresses = new List<IntPtr>();
                 this.DebugMessage("Hook: Before device creation");
-                using (var factory = new Factory())
+                using (var factory = new Factory1())
                 {
                     using (var device = new Device(factory.GetAdapter(0), DeviceCreationFlags.None))
                     {
