@@ -91,7 +91,7 @@ namespace Capture.Hook
         SharpDX.Windows.RenderForm _renderForm;
         Texture2D _resolvedRTShared;
         SharpDX.DXGI.KeyedMutex _resolvedRTSharedKeyedMutex;
-        ShaderResourceView _resolvedSharedSRV;
+        ShaderResourceView _resolvedSRV;
         Capture.Hook.DX11.ScreenAlignedQuadRenderer _saQuad;
         Texture2D _finalRT;
         Texture2D _resizedRT;
@@ -107,7 +107,6 @@ namespace Capture.Hook
         Texture2D _resolvedRT;
         SharpDX.DXGI.KeyedMutex _resolvedRTKeyedMutex;
         SharpDX.DXGI.KeyedMutex _resolvedRTKeyedMutex_Dev2;
-        //ShaderResourceView _resolvedSRV;
         #endregion
 
         protected override string HookName
@@ -228,16 +227,111 @@ namespace Capture.Hook
             return DXGISwapChain_ResizeTargetHook.Original(swapChainPtr, ref newTargetParameters);
         }
 
-        void EnsureResources(SharpDX.Direct3D11.Device device, Texture2DDescription description, Rectangle captureRegion, ScreenshotRequest request)
+        void EnsureResources(SharpDX.Direct3D11.Device device, Texture2DDescription description, Rectangle captureRegion, ScreenshotRequest request, bool useSameDeviceForResize = false)
         {
-            if (_device != null && request.Resize != null && (_resizedRT == null || (_resizedRT.Device.NativePointer != _device.NativePointer || _resizedRT.Description.Width != request.Resize.Value.Width || _resizedRT.Description.Height != request.Resize.Value.Height)))
+            var resizeDevice = useSameDeviceForResize ? device : _device;
+
+            // Check if _resolvedRT or _finalRT require creation
+            if (_finalRT != null && (_finalRT.Device.NativePointer == device.NativePointer || _finalRT.Device.NativePointer == _device.NativePointer) &&
+                _finalRT.Description.Height == captureRegion.Height && _finalRT.Description.Width == captureRegion.Width &&
+                _resolvedRT != null && _resolvedRT.Description.Height == description.Height && _resolvedRT.Description.Width == description.Width &&
+                (_resolvedRT.Device.NativePointer == device.NativePointer || _resolvedRT.Device.NativePointer == _device.NativePointer) && _resolvedRT.Description.Format == description.Format
+                )
+            {
+
+            }
+            else
+            {
+                RemoveAndDispose(ref _query);
+                RemoveAndDispose(ref _resolvedRT);
+                RemoveAndDispose(ref _resolvedSRV);
+                RemoveAndDispose(ref _finalRT);
+                RemoveAndDispose(ref _resolvedRTShared);
+                RemoveAndDispose(ref _resolvedRTKeyedMutex);
+                RemoveAndDispose(ref _resolvedRTKeyedMutex_Dev2);
+
+                _query = new Query(resizeDevice, new QueryDescription()
+                {
+                    Flags = QueryFlags.None,
+                    Type = QueryType.Event
+                });
+                _queryIssued = false;
+
+                try
+                {
+                    ResourceOptionFlags resolvedRTOptionFlags = ResourceOptionFlags.None;
+
+                    if (device != resizeDevice)
+                        resolvedRTOptionFlags |= ResourceOptionFlags.SharedKeyedmutex;
+
+                    _resolvedRT = ToDispose(new Texture2D(device, new Texture2DDescription()
+                    {
+                        CpuAccessFlags = CpuAccessFlags.None,
+                        Format = description.Format, // for multisampled backbuffer, this must be same format
+                        Height = description.Height,
+                        Usage = ResourceUsage.Default,
+                        Width = description.Width,
+                        ArraySize = 1,
+                        SampleDescription = new SharpDX.DXGI.SampleDescription(1, 0), // Ensure single sample
+                        BindFlags = BindFlags.ShaderResource,
+                        MipLevels = 1,
+                        OptionFlags = resolvedRTOptionFlags
+                    }));
+                }
+                catch
+                {
+                    // Failed to create the shared resource, try again using the same device as game for resize
+                    EnsureResources(device, description, captureRegion, request, true);
+                    return;
+                }
+
+                // Retrieve reference to the keyed mutex
+                _resolvedRTKeyedMutex = ToDispose(_resolvedRT.QueryInterfaceOrNull<SharpDX.DXGI.KeyedMutex>());
+
+                // If the resolvedRT is a shared resource _resolvedRTKeyedMutex will not be null
+                if (_resolvedRTKeyedMutex != null)
+                {
+                    using (var resource = _resolvedRT.QueryInterface<SharpDX.DXGI.Resource>())
+                    {
+                        _resolvedRTShared = ToDispose(resizeDevice.OpenSharedResource<Texture2D>(resource.SharedHandle));
+                        _resolvedRTKeyedMutex_Dev2 = ToDispose(_resolvedRTShared.QueryInterfaceOrNull<SharpDX.DXGI.KeyedMutex>());
+                    }
+                    // SRV for use if resizing
+                    _resolvedSRV = ToDispose(new ShaderResourceView(resizeDevice, _resolvedRTShared));
+                }
+                else
+                {
+                    _resolvedSRV = ToDispose(new ShaderResourceView(resizeDevice, _resolvedRT));
+                }
+
+                _finalRT = ToDispose(new Texture2D(resizeDevice, new Texture2DDescription()
+                {
+                    CpuAccessFlags = CpuAccessFlags.Read,
+                    Format = description.Format,
+                    Height = captureRegion.Height,
+                    Usage = ResourceUsage.Staging,
+                    Width = captureRegion.Width,
+                    ArraySize = 1,
+                    SampleDescription = new SharpDX.DXGI.SampleDescription(1, 0),
+                    BindFlags = BindFlags.None,
+                    MipLevels = 1,
+                    OptionFlags = ResourceOptionFlags.None
+                }));
+                _finalRTMapped = false;
+            }
+
+            if (_resolvedRT != null && _resolvedRTKeyedMutex_Dev2 == null && resizeDevice == _device)
+                resizeDevice = device;
+
+            if (resizeDevice != null && request.Resize != null && (_resizedRT == null || (_resizedRT.Device.NativePointer != resizeDevice.NativePointer || _resizedRT.Description.Width != request.Resize.Value.Width || _resizedRT.Description.Height != request.Resize.Value.Height)))
             {
                 // Create/Recreate resources for resizing
                 RemoveAndDispose(ref _resizedRT);
                 RemoveAndDispose(ref _resizedRTV);
                 RemoveAndDispose(ref _saQuad);
 
-                _resizedRT = ToDispose(new Texture2D(_device, new Texture2DDescription() {
+                _resizedRT = ToDispose(new Texture2D(resizeDevice, new Texture2DDescription()
+                {
                     Format = SharpDX.DXGI.Format.R8G8B8A8_UNorm, // Supports BMP/PNG/etc
                     Height = request.Resize.Value.Height,
                     Width = request.Resize.Value.Width,
@@ -249,74 +343,11 @@ namespace Capture.Hook
                     OptionFlags = ResourceOptionFlags.None
                 }));
 
-                _resizedRTV = ToDispose(new RenderTargetView(_device, _resizedRT));
+                _resizedRTV = ToDispose(new RenderTargetView(resizeDevice, _resizedRT));
 
                 _saQuad = ToDispose(new DX11.ScreenAlignedQuadRenderer());
-                _saQuad.Initialize(new DX11.DeviceManager(_device));
+                _saQuad.Initialize(new DX11.DeviceManager(resizeDevice));
             }
-
-            // Check if _resolvedRT or _finalRT require creation
-            if (_finalRT != null && _finalRT.Device.NativePointer == _device.NativePointer &&
-                _finalRT.Description.Height == captureRegion.Height && _finalRT.Description.Width == captureRegion.Width &&
-                _resolvedRT != null && _resolvedRT.Description.Height == description.Height && _resolvedRT.Description.Width == description.Width &&
-                _resolvedRT.Device.NativePointer == device.NativePointer && _resolvedRT.Description.Format == description.Format
-                )
-            {
-                return;
-            }
-
-            RemoveAndDispose(ref _query);
-            RemoveAndDispose(ref _resolvedRT);
-            RemoveAndDispose(ref _resolvedSharedSRV);
-            RemoveAndDispose(ref _finalRT);
-            RemoveAndDispose(ref _resolvedRTShared);
-
-            _query = new Query(_device, new QueryDescription()
-            {
-                Flags = QueryFlags.None,
-                Type = QueryType.Event
-            });
-            _queryIssued = false;
-
-            _resolvedRT = ToDispose(new Texture2D(device, new Texture2DDescription() {
-                CpuAccessFlags = CpuAccessFlags.None,
-                Format = description.Format, // for multisampled backbuffer, this must be same format
-                Height = description.Height,
-                Usage = ResourceUsage.Default,
-                Width = description.Width,
-                ArraySize = 1,
-                SampleDescription = new SharpDX.DXGI.SampleDescription(1, 0), // Ensure single sample
-                BindFlags = BindFlags.ShaderResource,
-                MipLevels = 1,
-                OptionFlags = ResourceOptionFlags.SharedKeyedmutex
-            }));
-
-            // Retrieve reference to the keyed mutex
-            _resolvedRTKeyedMutex = ToDispose(_resolvedRT.QueryInterfaceOrNull<SharpDX.DXGI.KeyedMutex>());
-
-            using (var resource = _resolvedRT.QueryInterface<SharpDX.DXGI.Resource>())
-            {
-                _resolvedRTShared = ToDispose(_device.OpenSharedResource<Texture2D>(resource.SharedHandle));
-                _resolvedRTKeyedMutex_Dev2 = ToDispose(_resolvedRTShared.QueryInterfaceOrNull<SharpDX.DXGI.KeyedMutex>());
-            }
-
-            // SRV for use if resizing
-            _resolvedSharedSRV = ToDispose(new ShaderResourceView(_device, _resolvedRTShared));
-
-            _finalRT = ToDispose(new Texture2D(_device, new Texture2DDescription()
-            {
-                CpuAccessFlags = CpuAccessFlags.Read,
-                Format = description.Format,
-                Height = captureRegion.Height,
-                Usage = ResourceUsage.Staging,
-                Width = captureRegion.Width,
-                ArraySize = 1,
-                SampleDescription = new SharpDX.DXGI.SampleDescription(1, 0),
-                BindFlags = BindFlags.None,
-                MipLevels = 1,
-                OptionFlags = ResourceOptionFlags.None
-            }));
-            _finalRTMapped = false;
         }
 
         /// <summary>
@@ -378,7 +409,7 @@ namespace Capture.Hook
                                 {
                                     if (_resolvedRTKeyedMutex_Dev2 != null)
                                         _resolvedRTKeyedMutex_Dev2.Acquire(1, int.MaxValue);
-                                    _saQuad.ShaderResource = _resolvedSharedSRV;
+                                    _saQuad.ShaderResource = _resolvedSRV;
                                     _saQuad.RenderTargetView = _resizedRTV;
                                     _saQuad.RenderTarget = _resizedRT;
                                     _saQuad.Render();
@@ -392,7 +423,10 @@ namespace Capture.Hook
                             else
                             {
                                 // Make sourceTexture be the resolved texture
-                                sourceTexture = _resolvedRTShared;
+                                if (_resolvedRTShared != null)
+                                    sourceTexture = _resolvedRTShared;
+                                else
+                                    sourceTexture = _resolvedRT;
                             }
                         }
                         else
@@ -401,7 +435,11 @@ namespace Capture.Hook
                             if (_resolvedRTKeyedMutex != null) _resolvedRTKeyedMutex.Acquire(0, int.MaxValue);
                             currentRT.Device.ImmediateContext.CopySubresourceRegion(currentRT, 0, null, _resolvedRT, 0);
                             if (_resolvedRTKeyedMutex != null) _resolvedRTKeyedMutex.Release(1);
-                            sourceTexture = _resolvedRTShared;
+
+                            if (_resolvedRTShared != null)
+                                sourceTexture = _resolvedRTShared;
+                            else
+                                sourceTexture = _resolvedRT;
                         }
 
                         // Copy to memory and send back to host process on a background thread so that we do not cause any delay in the rendering pipeline
@@ -411,6 +449,7 @@ namespace Capture.Hook
                         this.Request = null;
 
                         bool acquireLock = sourceTexture == _resolvedRTShared;
+
 
                         ThreadPool.QueueUserWorkItem(new WaitCallback((o) =>
                         {

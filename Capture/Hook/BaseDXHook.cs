@@ -113,6 +113,10 @@ namespace Capture.Hook
             {
                 // Ignore remoting exceptions
             }
+            catch (Exception)
+            {
+                // Ignore all other exceptions
+            }
 #endif
         }
 
