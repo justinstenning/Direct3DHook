@@ -660,17 +660,19 @@ namespace Capture.Hook
                             if (pixelFormat != format)
                             {
                                 // IWICFormatConverter
-                                var converter = new SharpDX.WIC.FormatConverter(wicFactory);
-                                if (converter.CanConvert(format, pixelFormat))
+                                using (var converter = new SharpDX.WIC.FormatConverter(wicFactory))
                                 {
-                                    converter.Initialize(bitmap, SharpDX.WIC.PixelFormat.Format24bppBGR, SharpDX.WIC.BitmapDitherType.None, null, 0, SharpDX.WIC.BitmapPaletteType.MedianCut);
-                                    bitmapFrameEncode.SetPixelFormat(ref pixelFormat);
-                                    bitmapFrameEncode.WriteSource(converter);
-                                }
-                                else
-                                {
-                                    this.DebugMessage(string.Format("Unable to convert Direct3D texture format {0} to a suitable WIC format", texture.Description.Format.ToString()));
-                                    return;
+                                    if (converter.CanConvert(format, pixelFormat))
+                                    {
+                                        converter.Initialize(bitmap, SharpDX.WIC.PixelFormat.Format24bppBGR, SharpDX.WIC.BitmapDitherType.None, null, 0, SharpDX.WIC.BitmapPaletteType.MedianCut);
+                                        bitmapFrameEncode.SetPixelFormat(ref pixelFormat);
+                                        bitmapFrameEncode.WriteSource(converter);
+                                    }
+                                    else
+                                    {
+                                        this.DebugMessage(string.Format("Unable to convert Direct3D texture format {0} to a suitable WIC format", texture.Description.Format.ToString()));
+                                        return;
+                                    }
                                 }
                             }
                             else
