@@ -6,7 +6,7 @@ using System.Text;
 namespace Capture.Interface
 {
     [Serializable]   
-    public class MessageReceivedEventArgs: MarshalByRefObject
+    public class MessageReceivedEventArgs
     {
         public MessageType MessageType { get; set; }
         public string Message { get; set; }

@@ -6,7 +6,7 @@ using System.Text;
 namespace Capture.Interface
 {
     [Serializable]
-    public class DisplayTextEventArgs: MarshalByRefObject
+    public class DisplayTextEventArgs
     {
         public string Text { get; set; }
         public TimeSpan Duration { get; set; }
