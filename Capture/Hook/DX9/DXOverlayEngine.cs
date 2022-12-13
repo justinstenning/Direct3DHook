@@ -211,6 +211,8 @@ namespace Capture.Hook.DX9
             {
                 _device = null;
             }
+
+            base.Dispose(disposing);
         }
 
         void SafeDispose(DisposeBase disposableObj)

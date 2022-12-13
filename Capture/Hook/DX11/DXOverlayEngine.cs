@@ -77,7 +77,7 @@ namespace Capture.Hook.DX11
                 //    _deviceContext.OutputMerger.SetTargets(_renderTargetView);
                 //}
 
-                _spriteEngine = new DXSprite(_device, _deviceContext);
+                _spriteEngine = ToDispose(new DXSprite(_device, _deviceContext));
                 if (!_spriteEngine.Initialize())
                     return false;
 
@@ -213,6 +213,7 @@ namespace Capture.Hook.DX11
             {
                 _device = null;
             }
+            base.Dispose(disposing);
         }
 
         void SafeDispose(DisposeBase disposableObj)
