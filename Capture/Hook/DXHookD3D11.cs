@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -375,7 +375,7 @@ namespace Capture.Hook
 
                         if (this.Request.RegionToCapture.Width > 0)
                         {
-                            captureRegion = new Rectangle(this.Request.RegionToCapture.Left, this.Request.RegionToCapture.Top, this.Request.RegionToCapture.Right, this.Request.RegionToCapture.Bottom);
+                            captureRegion = new Rectangle(this.Request.RegionToCapture.Left, this.Request.RegionToCapture.Top, this.Request.RegionToCapture.Width, this.Request.RegionToCapture.Height);
                         }
                         else if (this.Request.Resize.HasValue)
                         {
