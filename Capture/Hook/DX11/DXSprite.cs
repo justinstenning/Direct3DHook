@@ -278,9 +278,8 @@ technique11 SpriteTech {
 
             _batchTexSRV = texSRV;
 
-            Texture2D tex = _batchTexSRV.ResourceAs<Texture2D>();
+            using (Texture2D tex = _batchTexSRV.ResourceAs<Texture2D>())
             {
-
                 Texture2DDescription texDesc = tex.Description;
                 _texWidth = texDesc.Width;
                 _texHeight = texDesc.Height;
